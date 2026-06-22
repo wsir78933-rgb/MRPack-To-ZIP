@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="cube-stroke" x1="14" x2="50" y1="12" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b6ff32" />
+      <stop offset="1" stop-color="#5cff1f" />
+    </linearGradient>
+    <radialGradient id="icon-bg" cx="50%" cy="42%" r="64%">
+      <stop stop-color="#112018" />
+      <stop offset="1" stop-color="#03070b" />
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#icon-bg)" />
+  <path
+    d="M32 10.5 49 20.25v19.5L32 49.5 15 39.75v-19.5L32 10.5Z"
+    fill="none"
+    stroke="url(#cube-stroke)"
+    stroke-linejoin="round"
+    stroke-width="4"
+  />
+  <path
+    d="m15.5 20.5 16.5 9.5 16.5-9.5M32 30v19"
+    fill="none"
+    stroke="#83ff27"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="4"
+  />
+  <path
+    d="m23 25 9-5.2 9 5.2-9 5.1L23 25Z"
+    fill="#83ff27"
+    opacity="0.2"
+  />
+</svg>
