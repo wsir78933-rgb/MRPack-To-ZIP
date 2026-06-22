@@ -156,21 +156,6 @@ export const englishConverterPageCopy: ConverterPageCopy = {
       isActive: false
     },
     {
-      label: 'What is MRPack?',
-      href: '#mrpack-file',
-      isActive: false
-    },
-    {
-      label: 'How it works',
-      href: '#how-to-convert',
-      isActive: false
-    },
-    {
-      label: 'Launcher support',
-      href: '#launcher-support',
-      isActive: false
-    },
-    {
       label: 'FAQ',
       href: '#faq',
       isActive: false
@@ -391,21 +376,6 @@ export const chineseConverterPageCopy: ConverterPageCopy = {
     {
       label: 'ZIP 转 MRPack',
       href: '/zh/zip-to-mrpack',
-      isActive: false
-    },
-    {
-      label: '什么是 MRPack',
-      href: '#mrpack-file',
-      isActive: false
-    },
-    {
-      label: '如何转换',
-      href: '#how-to-convert',
-      isActive: false
-    },
-    {
-      label: '启动器兼容',
-      href: '#launcher-support',
       isActive: false
     },
     {

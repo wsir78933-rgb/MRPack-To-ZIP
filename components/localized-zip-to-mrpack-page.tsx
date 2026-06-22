@@ -36,6 +36,7 @@ import { getCompletedProgressPercentText } from "@/lib/conversion-progress/progr
 import { getFaqBulkToggleState } from "@/lib/faq/bulk-toggle";
 import {
   getHoverExpandedQuestions,
+  getNextHoveredQuestionAfterVisibleChange,
   getNextManualExpandedQuestionsAfterVisibleChange,
   getNextHoveredQuestionAfterLeave,
 } from "@/lib/faq/hover-expansion";
@@ -511,13 +512,20 @@ function ZipToMrpackFaqSection({
   }
 
   function changeManualExpandedQuestions(nextVisibleExpandedQuestions: string[]) {
-    onExpandedQuestionsChange(
+    const nextManualExpandedQuestions =
       getNextManualExpandedQuestionsAfterVisibleChange({
         expandedQuestions,
         hoveredQuestion,
         nextVisibleExpandedQuestions,
-      }),
-    );
+      });
+    const nextHoveredQuestion = getNextHoveredQuestionAfterVisibleChange({
+      expandedQuestions,
+      hoveredQuestion,
+      nextVisibleExpandedQuestions,
+    });
+
+    setHoveredQuestion(nextHoveredQuestion);
+    onExpandedQuestionsChange(nextManualExpandedQuestions);
   }
 
   return (

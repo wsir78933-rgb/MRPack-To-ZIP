@@ -32,6 +32,19 @@ export function getNextHoveredQuestionAfterLeave({
   return hoveredQuestion === leavingQuestion ? null : hoveredQuestion;
 }
 
+export function getNextHoveredQuestionAfterVisibleChange({
+  hoveredQuestion,
+  nextVisibleExpandedQuestions,
+}: ManualExpandedQuestionsInput): string | null {
+  if (!hoveredQuestion) {
+    return null;
+  }
+
+  return nextVisibleExpandedQuestions.includes(hoveredQuestion)
+    ? hoveredQuestion
+    : null;
+}
+
 export function getNextManualExpandedQuestionsAfterVisibleChange({
   expandedQuestions,
   hoveredQuestion,

@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   getHoverExpandedQuestions,
+  getNextHoveredQuestionAfterVisibleChange,
   getNextManualExpandedQuestionsAfterVisibleChange,
   getNextHoveredQuestionAfterLeave,
 } from "@/lib/faq/hover-expansion";
@@ -81,5 +82,49 @@ describe("FAQ hover expansion", () => {
         nextVisibleExpandedQuestions: [],
       }),
     ).toEqual([]);
+  });
+
+  test("clears hover state when a hovered manual question is clicked closed", () => {
+    const hoveredQuestion = "Why convert .mrpack to ZIP?";
+    const nextManualExpandedQuestions =
+      getNextManualExpandedQuestionsAfterVisibleChange({
+        expandedQuestions: [hoveredQuestion],
+        hoveredQuestion,
+        nextVisibleExpandedQuestions: [],
+      });
+    const nextHoveredQuestion = getNextHoveredQuestionAfterVisibleChange({
+      expandedQuestions: [hoveredQuestion],
+      hoveredQuestion,
+      nextVisibleExpandedQuestions: [],
+    });
+
+    expect(
+      getHoverExpandedQuestions({
+        expandedQuestions: nextManualExpandedQuestions,
+        hoveredQuestion: nextHoveredQuestion,
+      }),
+    ).toEqual([]);
+  });
+
+  test("keeps a clicked hover-opened question visible as a manual question", () => {
+    const hoveredQuestion = "Why convert .mrpack to ZIP?";
+    const nextManualExpandedQuestions =
+      getNextManualExpandedQuestionsAfterVisibleChange({
+        expandedQuestions: [],
+        hoveredQuestion,
+        nextVisibleExpandedQuestions: [],
+      });
+    const nextHoveredQuestion = getNextHoveredQuestionAfterVisibleChange({
+      expandedQuestions: [],
+      hoveredQuestion,
+      nextVisibleExpandedQuestions: [],
+    });
+
+    expect(
+      getHoverExpandedQuestions({
+        expandedQuestions: nextManualExpandedQuestions,
+        hoveredQuestion: nextHoveredQuestion,
+      }),
+    ).toEqual([hoveredQuestion]);
   });
 });

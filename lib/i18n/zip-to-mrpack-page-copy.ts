@@ -87,20 +87,14 @@ export type ZipToMrpackFaqCopy = {
 };
 
 const englishNavLinks = [
-  { href: "/", label: "MRPack to ZIP", isActive: false },
-  { href: "/zip-to-mrpack", label: "ZIP to MRPack", isActive: true },
-  { href: "#what-it-converts", label: "What it converts", isActive: false },
-  { href: "#how-it-works", label: "How it works", isActive: false },
-  { href: "#limits", label: "Limits", isActive: false },
+  { href: "/", label: "Converter", isActive: true },
+  { href: "/zip-to-mrpack", label: "ZIP to MRPack", isActive: false },
   { href: "#faq", label: "FAQ", isActive: false },
 ];
 
 const chineseNavLinks = [
-  { href: "/zh", label: "MRPack 转 ZIP", isActive: false },
-  { href: "/zh/zip-to-mrpack", label: "ZIP 转 MRPack", isActive: true },
-  { href: "#what-it-converts", label: "转换内容", isActive: false },
-  { href: "#how-it-works", label: "转换流程", isActive: false },
-  { href: "#limits", label: "限制", isActive: false },
+  { href: "/zh", label: "转换器", isActive: true },
+  { href: "/zh/zip-to-mrpack", label: "ZIP 转 MRPack", isActive: false },
   { href: "#faq", label: "FAQ", isActive: false },
 ];
 
