@@ -2,9 +2,9 @@ import '../globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'MRPack to ZIP Converter',
+  title: 'MRPack to ZIP Converter - Free Online Modrinth Modpack Tool',
   description:
-    'Convert Modrinth .mrpack files, project slugs, or direct download URLs into standard ZIP archives in your browser.',
+    'Use this MRPack converter to turn Modrinth .mrpack files, project slugs, or download links into launcher-ready ZIP files in your browser.',
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
     shortcut: [{ url: '/icon.svg', type: 'image/svg+xml' }],

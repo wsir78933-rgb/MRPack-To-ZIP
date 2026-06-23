@@ -46,6 +46,7 @@ import {
 } from "@/lib/conversion-progress/conversion-run-token";
 import { getCompletedProgressPercentText } from "@/lib/conversion-progress/progress-display";
 import { getFaqBulkToggleState } from "@/lib/faq/bulk-toggle";
+import { selectInputTextOnDoubleClick } from "@/lib/forms/select-input-text-on-double-click";
 import {
   getHoverExpandedQuestions,
   getNextHoveredQuestionAfterVisibleChange,
@@ -607,7 +608,7 @@ function ConverterPanel({
 
   return (
     <section
-      className="mx-auto mt-8 max-w-[900px]"
+      className="mx-auto mt-8 max-w-[1040px]"
       id="converter"
     >
       <InputSourceTabs
@@ -779,13 +780,19 @@ function TextSourceForm({
       </label>
       <div className="mt-3 flex flex-col gap-3 sm:flex-row">
         <Input
-          className="min-h-[52px] rounded-lg border-white/12 bg-black/24 px-4 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] placeholder:text-slate-500 focus-visible:border-lime-300/70 focus-visible:ring-lime-300/20"
+          className="min-h-[52px] rounded-lg border-white/12 bg-black/24 px-4 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] selection:bg-lime-300 selection:text-slate-950 placeholder:text-slate-500 focus-visible:border-lime-300/70 focus-visible:ring-lime-300/20"
           disabled={disabled}
           id={inputId}
           placeholder={inputModeCopy.inputPlaceholder}
           type={inputType}
           value={value}
           onChange={(event) => onValueChange(event.currentTarget.value)}
+          onDoubleClick={(event) =>
+            selectInputTextOnDoubleClick({
+              inputElement: event.currentTarget,
+              inputType
+            })
+          }
         />
         <Button
           className="min-h-[52px] w-full min-w-0 rounded-lg bg-gradient-to-b from-lime-300 to-lime-500 px-4 text-sm font-black text-slate-950 shadow-[0_0_28px_rgba(105,255,70,0.28),inset_0_1px_0_rgba(255,255,255,0.45)] hover:translate-y-[-1px] hover:from-lime-200 hover:to-lime-400 hover:text-slate-950 sm:w-auto sm:px-7 sm:text-base"
@@ -1264,7 +1271,7 @@ function FaqSection({
 
   return (
     <section
-      className="mx-auto mt-12 max-w-[900px] border-t border-white/10 pt-10"
+      className="mx-auto mt-12 max-w-[1040px] border-t border-white/10 pt-10"
       id="faq"
     >
       <div className="flex items-center justify-between gap-4">
@@ -1334,7 +1341,7 @@ function ContentSection({
 }) {
   return (
     <section
-      className="mx-auto mt-12 max-w-[900px] border-t border-white/10 pt-10"
+      className="mx-auto mt-12 max-w-[1040px] border-t border-white/10 pt-10"
       id={id}
     >
       <div className="mb-6">

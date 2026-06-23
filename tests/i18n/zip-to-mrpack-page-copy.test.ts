@@ -44,6 +44,30 @@ describe("zip to mrpack page copy", () => {
     );
   });
 
+  test("marks the ZIP to MRPack navigation item active on ZIP to MRPack pages", () => {
+    const englishActiveNavigationLinks = englishZipToMrpackPageCopy.navLinks.filter(
+      (navigationLink) => navigationLink.isActive,
+    );
+    const chineseActiveNavigationLinks = chineseZipToMrpackPageCopy.navLinks.filter(
+      (navigationLink) => navigationLink.isActive,
+    );
+
+    expect(englishActiveNavigationLinks).toEqual([
+      {
+        href: "/zip-to-mrpack",
+        label: "ZIP to MRPack",
+        isActive: true,
+      },
+    ]);
+    expect(chineseActiveNavigationLinks).toEqual([
+      {
+        href: "/zh/zip-to-mrpack",
+        label: "ZIP 转 MRPack",
+        isActive: true,
+      },
+    ]);
+  });
+
   test("adds English what, how, limits, and FAQ content", () => {
     const englishPageText = collectCopyText(englishZipToMrpackPageCopy);
 

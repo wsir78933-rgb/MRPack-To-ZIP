@@ -23,9 +23,9 @@ type PageSeoDefinition = {
 
 export const pageSeoDefinitions: Record<SiteRoutePath, PageSeoDefinition> = {
   "/": {
-    title: "MRPack to ZIP Converter",
+    title: "MRPack to ZIP Converter - Free Online Modrinth Modpack Tool",
     description:
-      "Convert Modrinth .mrpack files, project slugs, or direct download URLs into standard ZIP archives in your browser.",
+      "Use this MRPack converter to turn Modrinth .mrpack files, project slugs, or download links into launcher-ready ZIP files in your browser.",
     canonicalPath: "/",
     languageAlternates: {
       en: "/",
@@ -34,9 +34,9 @@ export const pageSeoDefinitions: Record<SiteRoutePath, PageSeoDefinition> = {
     },
   },
   "/zh": {
-    title: "MRPack 转 ZIP 转换器",
+    title: "MRPack 转 ZIP 在线转换器 - Minecraft 模组包工具",
     description:
-      "在浏览器中把 Modrinth .mrpack 文件、项目 ID 或直接下载链接转换成标准 ZIP 压缩包。",
+      "在浏览器中使用 MRPack 转 ZIP 工具，将 Modrinth .mrpack 文件、项目 ID 或下载链接转换成启动器可导入的 ZIP。",
     canonicalPath: "/zh",
     languageAlternates: {
       en: "/",

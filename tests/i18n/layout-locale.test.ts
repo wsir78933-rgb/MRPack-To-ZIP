@@ -66,11 +66,11 @@ describe("locale root layouts", () => {
 
     expect(englishLayoutSource).toContain("MRPack to ZIP Converter");
     expect(englishLayoutSource).toContain(
-      "Convert Modrinth .mrpack files, project slugs, or direct download URLs",
+      "Use this MRPack converter to turn Modrinth .mrpack files, project slugs",
     );
-    expect(chineseLayoutSource).toContain("MRPack 转 ZIP 转换器");
+    expect(chineseLayoutSource).toContain("MRPack 转 ZIP 在线转换器");
     expect(chineseLayoutSource).toContain(
-      "在浏览器中把 Modrinth .mrpack 文件、项目 ID 或直接下载链接转换成标准 ZIP 压缩包。",
+      "在浏览器中使用 MRPack 转 ZIP 工具，将 Modrinth .mrpack 文件、项目 ID 或下载链接转换成启动器可导入的 ZIP。",
     );
 
     for (const layoutSource of [englishLayoutSource, chineseLayoutSource]) {

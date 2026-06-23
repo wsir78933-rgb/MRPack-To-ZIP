@@ -56,6 +56,58 @@ describe("converter page copy", () => {
     expect(englishPageText).toContain("Minecraft modpack converter");
   });
 
+  test("adds homepage depth for format, launcher, and troubleshooting intent", () => {
+    const englishPageText = collectCopyText(englishConverterPageCopy);
+    const chinesePageText = collectCopyText(chineseConverterPageCopy);
+
+    for (const expectedEnglishText of [
+      "MRPack vs ZIP",
+      "modrinth.index.json",
+      "overrides",
+      "Prism Launcher",
+      "MultiMC",
+      "Official Minecraft Launcher",
+      "Technic",
+      "FAILED_DOWNLOADS.txt",
+    ]) {
+      expect(englishPageText).toContain(expectedEnglishText);
+    }
+
+    for (const expectedChineseText of [
+      "MRPack 与 ZIP",
+      "modrinth.index.json",
+      "overrides",
+      "Prism Launcher",
+      "MultiMC",
+      "官方 Minecraft 启动器",
+      "Technic",
+      "FAILED_DOWNLOADS.txt",
+    ]) {
+      expect(chinesePageText).toContain(expectedChineseText);
+    }
+
+    expect(englishConverterPageCopy.faq.items.length).toBeGreaterThanOrEqual(7);
+    expect(chineseConverterPageCopy.faq.items.length).toBeGreaterThanOrEqual(7);
+  });
+
+  test("omits repeated conceptual FAQ questions from both locales", () => {
+    const englishFaqQuestions = englishConverterPageCopy.faq.items.map(
+      (faqItem) => faqItem.question,
+    );
+    const chineseFaqQuestions = chineseConverterPageCopy.faq.items.map(
+      (faqItem) => faqItem.question,
+    );
+
+    expect(englishFaqQuestions).not.toContain("Why convert .mrpack to ZIP?");
+    expect(englishFaqQuestions).not.toContain(
+      "What is the difference between MRPack and ZIP?",
+    );
+    expect(englishFaqQuestions).not.toContain("Does it need a backend?");
+    expect(chineseFaqQuestions).not.toContain("为什么要把 .mrpack 转成 ZIP？");
+    expect(chineseFaqQuestions).not.toContain("MRPack 与 ZIP 有什么区别？");
+    expect(chineseFaqQuestions).not.toContain("这个工具需要后端吗？");
+  });
+
   test("documents real converter limits in English and Chinese", () => {
     const englishPageText = collectCopyText(englishConverterPageCopy);
     const chinesePageText = collectCopyText(chineseConverterPageCopy);
