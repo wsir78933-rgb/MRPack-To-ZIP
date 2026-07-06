@@ -1,631 +1,745 @@
 # MRPack ZIP Converter 产品与技术规格说明
 
-## 1. 产品概述
+> 文档状态：当前实现规格
+>
+> 同步基准：当前仓库代码与自动化测试
+>
+> 同步日期：2026-06-29
 
-### 1.1 产品目标
+## 1. 文档定位
 
-构建一个基于浏览器的在线工具，用于将 Modrinth 的 `.mrpack` 整合包转换为标准 `.zip` 压缩包，让不支持 `.mrpack` 的 Minecraft 启动器或手动安装场景也能使用这些整合包。
+本文档描述当前仓库已经实现并由代码或测试支持的产品能力、数据流、技术边界和验收标准。
 
-转换逻辑应尽量在用户浏览器本地完成。用户上传的本地 `.mrpack` 文件不得上传到本产品服务器。
+文档遵循以下状态规则：
 
-### 1.2 参考产品
+- “当前能力”表示仓库中已有对应实现。
+- “验收标准”表示当前功能应持续满足的行为。
+- “后续规划”表示尚未实现，不属于当前版本承诺。
+- 当本文档与实现不一致时，应以代码和测试结果为事实依据，并及时更新本文档。
 
-参考网站：https://mrpackzip.com/
+当前产品不是早期纯前端骨架。它已经包含两条转换链路：
 
-参考产品包含三个主要输入模式：
+1. MRPack 转 ZIP。
+2. CurseForge ZIP 转 MRPack。
 
-1. Modrinth Project ID / slug
-2. 直接输入 `.mrpack` 下载 URL
-3. 上传本地 `.mrpack` 文件
+第二条链路使用服务端 API Route 保护 CurseForge API 密钥，因此不能再把整个项目描述为“无需后端能力的纯前端应用”。
 
-### 1.3 核心价值
+## 2. 产品概述
 
-- 无需安装桌面软件即可转换 `.mrpack`。
-- 用户本地文件在浏览器内处理，不上传到本站服务器。
-- 支持只有 Modrinth 项目 slug 或下载链接的用户。
-- 根据 `modrinth.index.json` 中的文件列表下载依赖文件，并重新打包为完整 ZIP。
-- 当部分文件下载失败时，生成清晰的失败清单，方便用户手动补齐。
+### 2.1 产品目标
 
-## 2. 目标用户
+提供一个浏览器优先的 Minecraft 整合包转换工具：
 
-| 用户类型 | 核心需求 |
+- 将 Modrinth `.mrpack` 转换为标准 `.zip`。
+- 将 CurseForge 导出的整合包 `.zip` 转换为兼容 Modrinth 的 `.mrpack`。
+- 尽量在浏览器中读取、解析和打包用户选择的本地文件。
+- 对必须访问第三方平台的步骤给出明确的网络和隐私边界。
+- 对无效输入、危险路径、第三方响应异常和体积超限执行 Fail Fast。
+
+### 2.2 目标用户
+
+| 用户类型 | 主要需求 |
 | --- | --- |
-| Minecraft 普通玩家 | 将 Modrinth 整合包转换成启动器可识别的 ZIP。 |
-| 服务器服主 | 生成便于分发或手动安装的整合包 ZIP。 |
-| 新手用户 | 不想手动阅读 `modrinth.index.json` 并逐个下载 mod。 |
-| 多启动器用户 | 希望同一个整合包可以在不同启动器或环境中使用。 |
+| Minecraft 普通玩家 | 在不同启动器或手动安装流程之间迁移整合包。 |
+| Modrinth 用户 | 将 `.mrpack` 展开为更通用的 ZIP。 |
+| CurseForge 用户 | 将带 `manifest.json` 的 CurseForge 导出包转换为 `.mrpack`。 |
+| 服务器服主 | 获得便于检查、上传或分发的整合包文件。 |
 
-## 3. 产品范围
+### 2.3 当前能力总览
 
-### 3.1 MVP 范围
-
-MVP 必须包含：
-
-- 上传本地 `.mrpack` 并转换。
-- 输入 Modrinth Project ID / slug 并转换。
-- 输入直接 `.mrpack` URL 并转换。
-- 浏览器端解析 `.mrpack`。
-- 浏览器端生成 ZIP。
-- 下载 `modrinth.index.json` 中 `downloads[]` 指向的文件。
-- 当文件无法下载时生成 `FAILED_DOWNLOADS.txt`。
-- 展示转换进度和可操作的错误信息。
-- 提供基础 SEO 落地页内容。
-
-### 3.2 MVP 不包含
-
-MVP 不包含：
-
-- 用户账户。
-- 云端文件存储。
-- 服务端转换队列。
-- 支付或订阅。
-- 跨设备同步的转换历史。
-- 批量转换。
-- ZIP 转 MRPack。
-- 后台管理系统。
-
-## 4. 功能需求
-
-### 4.1 输入模式：上传文件
-
-用户可以上传本地 `.mrpack` 文件。
-
-需求：
-
-- 只接受以 `.mrpack` 结尾的文件。
-- 展示已选择文件的名称和大小。
-- 对非 `.mrpack` 文件给出明确错误提示。
-- 使用浏览器 File API 读取文件。
-- 不将用户文件上传到本产品服务器。
-
-验收标准：
-
-- 合法 `.mrpack` 文件可以被选择并成功转换。
-- 非法扩展名文件在转换前被拒绝。
-- 转换前用户可以看到已选择的文件名。
-
-### 4.2 输入模式：Project ID / Slug
-
-用户可以输入 Modrinth 项目的 ID 或 slug。
-
-需求：
-
-- 用户提交后，请求 Modrinth API 获取项目版本列表。
-- 从版本文件列表中找到第一个 `.mrpack` 文件。
-- 在浏览器中下载该 `.mrpack` 文件。
-- 下载完成后进入标准转换流程。
-- 对项目不存在、项目没有 `.mrpack` 文件、网络失败等情况展示明确错误。
-
-必须调用的第三方 API：
-
-```text
-GET https://api.modrinth.com/v2/project/{id_or_slug}/version?include_changelog=false
-```
-
-说明：
-
-- 公开读取不需要 API token。
-- Modrinth API 支持浏览器 CORS。
-- 当前公开限制约为每 IP 每分钟 300 次请求。
-- 浏览器无法自定义 `User-Agent`。MVP 可以前端直连，后续如果需要更严格遵循官方建议，可增加后端代理并设置产品级 `User-Agent`。
-
-验收标准：
-
-- 输入有效 Modrinth slug 后，可以找到并下载 `.mrpack`。
-- 输入无效 slug 时，展示项目不存在错误。
-- 项目没有 `.mrpack` 文件时，展示明确的无可用整合包错误。
-
-### 4.3 输入模式：直接 URL
-
-用户可以粘贴直接的 `.mrpack` 下载链接。
-
-需求：
-
-- 从浏览器直接 `fetch` 用户输入的 URL。
-- 校验下载内容是否能作为 `.mrpack` 解析。
-- 下载成功后进入标准转换流程。
-- 当 fetch 失败、CORS 阻止、文件无效时展示明确错误。
-
-验收标准：
-
-- 有效 `.mrpack` 直接链接可以成功转换。
-- 无法访问的 URL 展示清晰错误。
-- 非 `.mrpack` 或无效文件能够快速失败，并提示原因。
-
-### 4.4 解析 MRPack
-
-转换器必须在浏览器内解析 `.mrpack` 文件。
-
-需求：
-
-- 将 `.mrpack` 视为 ZIP 压缩包。
-- 读取 `modrinth.index.json`。
-- 如果缺少 `modrinth.index.json`，立即失败并提示。
-- 解析以下元信息：
-  - 包名
-  - 版本或版本 ID
-  - Minecraft 版本
-  - 依赖信息
-  - 文件数量
-  - 文件路径
-  - 下载 URL
-  - hash 信息
-
-验收标准：
-
-- 缺少 `modrinth.index.json` 时返回明确的非法整合包错误。
-- 转换过程中可以展示解析出的基础元信息。
-
-### 4.5 复制 Overrides
-
-转换器必须将 `.mrpack` 中的 override 文件写入输出 ZIP。
-
-需求：
-
-- 处理以下目录：
-  - `overrides/`
-  - `client-overrides/`
-  - `server-overrides/`
-- 写入输出 ZIP 时移除 override 前缀。
-- 保留 override 目录下的嵌套路径。
-- 跳过目录项，只写入文件项。
-
-验收标准：
-
-- `overrides/config/example.toml` 在输出 ZIP 中变为 `config/example.toml`。
-- 目录项不会被当成普通文件写入。
-
-### 4.6 下载引用的 Mod 文件
-
-转换器必须下载 `modrinth.index.json.files[]` 中列出的文件。
-
-需求：
-
-- 遍历每个文件条目的 `downloads[]`。
-- 逐个尝试 URL，直到有一个成功。
-- 成功后，将下载内容按该条目的 `path` 写入 ZIP。
-- 如果全部 URL 失败，记录失败路径和尝试过的 URL。
-- 单个文件失败不应终止整个转换。
-
-重要说明：
-
-- 这一步需要访问第三方文件下载地址。
-- 这不是结构化第三方 API 调用。
-- URL 来自用户提供的 `.mrpack` 文件内容。
-
-验收标准：
-
-- 成功下载的文件会写入输出 ZIP。
-- 单个文件下载失败不会导致整个转换失败。
-- 下载失败信息会写入 `FAILED_DOWNLOADS.txt`。
-
-### 4.7 生成 FAILED_DOWNLOADS.txt
-
-如果存在下载失败的文件，转换器必须向输出 ZIP 中添加失败清单。
-
-需求：
-
-- 文件名：`FAILED_DOWNLOADS.txt`
-- 包含每个失败文件的路径。
-- 包含尝试过的 URL。
-- 说明用户可能需要手动下载这些文件并放到正确目录。
-
-验收标准：
-
-- 当一个或多个 mod 文件下载失败时，输出 ZIP 包含 `FAILED_DOWNLOADS.txt`。
-- 当全部文件下载成功时，不生成 `FAILED_DOWNLOADS.txt`。
-
-### 4.8 生成 pack-info.json
-
-输出 ZIP 应包含自动生成的 `pack-info.json`。
-
-需求：
-
-- 包含基础元信息：
-  - name
-  - version
-  - game
-  - dependencies
-  - convertedBy
-  - convertedAt
-
-验收标准：
-
-- 每次成功转换都包含 `pack-info.json`。
-- `convertedAt` 使用 ISO 时间格式。
-
-### 4.9 生成 ZIP
-
-转换器必须在浏览器内生成最终 ZIP。
-
-需求：
-
-- 使用浏览器兼容的 ZIP 库，例如 JSZip。
-- 使用 DEFLATE 压缩。
-- 生成 Blob。
-- 使用 `URL.createObjectURL()` 触发下载。
-- 下载后及时释放 object URL。
-
-验收标准：
-
-- 用户可以下载生成的 ZIP。
-- ZIP 可以被常见压缩工具正常打开。
-
-## 5. 第三方 API 需求
-
-### 5.1 必需 API
-
-只有 Project ID / slug 模式必须调用第三方 API。
-
-```text
-GET https://api.modrinth.com/v2/project/{id_or_slug}/version?include_changelog=false
-```
-
-用途：
-
-- 获取项目的所有版本。
-- 找到版本文件中以 `.mrpack` 结尾的文件。
-- 取得 `.mrpack` 下载 URL。
-
-### 5.2 API 限制
-
-Modrinth API 已知限制：
-
-```text
-300 requests / minute / IP
-```
-
-MVP 推荐行为：
-
-- 只在用户点击提交时调用 API。
-- 不要在用户每输入一个字符时调用 API。
-- 在当前页面会话内缓存成功的项目查询结果。
-- 添加 `include_changelog=false`，减少响应体积。
-
-### 5.3 前端直连 API 与后端代理
-
-MVP 推荐：前端浏览器直连 Modrinth API。
-
-原因：
-
-- 限流按用户 IP 分散，更能承受自然流量。
-- 无需自建后端。
-- API 支持浏览器跨域。
-
-已知取舍：
-
-- 浏览器无法设置自定义 `User-Agent`。
-
-未来可选代理方案：
-
-```text
-前端 -> /api/modrinth/project/:slug/versions
-后端 -> Modrinth API，并设置产品级 User-Agent 和缓存
-```
-
-以下情况再考虑代理：
-
-- 部分用户无法直接访问 Modrinth API。
-- 产品需要集中缓存热门项目。
-- 产品需要更强的监控和错误治理。
-- 官方 API 使用规范要求更明确的可识别 `User-Agent`。
-
-## 6. 非 API 网络请求
-
-这些请求对于完整转换可能是必需的，但它们不是结构化 API 调用。
-
-| 网络请求 | 来源 | 用途 |
+| 能力 | 状态 | 入口 |
 | --- | --- | --- |
-| `.mrpack` 下载 URL | 用户输入或 Modrinth API 返回 | 下载源整合包。 |
-| `files[].downloads[]` URL | `modrinth.index.json` | 下载 mod jar 或资源文件。 |
-| CDN 脚本 | 产品前端 | 加载前端库，若未本地打包。 |
-| Analytics | 可选 | 访问统计。 |
-| Ads | 可选 | 广告变现。 |
+| 本地 `.mrpack` 转 ZIP | 已实现 | `/`、`/zh` |
+| Modrinth Project ID / slug 转 ZIP | 已实现 | `/`、`/zh` |
+| 直接 `.mrpack` URL 转 ZIP | 已实现 | `/`、`/zh` |
+| CurseForge ZIP 转 MRPack | 已实现 | `/zip-to-mrpack`、`/zh/zip-to-mrpack` |
+| 英文与简体中文页面 | 已实现 | 四个 canonical 页面 |
+| SEO metadata、sitemap、robots、JSON-LD | 已实现 | 全站页面层 |
+| 用户账户、云存储、历史记录、批量转换 | 未实现 | 后续规划 |
 
-MVP 推荐：
+## 3. 当前版本范围
 
-- 核心转换依赖应尽量随应用构建一起打包，不依赖运行时第三方 CDN。
-- 统计和广告不是 MVP 必需功能。
+### 3.1 已实现范围
 
-## 7. 转换数据流
+- 三种 MRPack 输入模式：Project ID / slug、直接 URL、本地上传。
+- 浏览器内解析 `.mrpack`、复制 overrides、下载引用文件并生成 ZIP。
+- 对引用文件执行体积、`fileSize` 和哈希校验。
+- 引用文件部分失败时继续转换并生成 `FAILED_DOWNLOADS.txt`。
+- 为 MRPack 转 ZIP 输出生成 `pack-info.json`。
+- 读取 CurseForge ZIP 的 `manifest.json` 与 overrides。
+- 通过受保护的 API Route 查询 CurseForge 文件元数据。
+- 通过 SHA-1 将 CurseForge 文件匹配到 Modrinth 文件。
+- 将无法匹配但可下载的 CurseForge-only 文件打包进 MRPack。
+- 双语 UI、转换进度、结果摘要、手动下载与错误展示。
+- canonical、hreflang、Open Graph、Twitter Card、JSON-LD、sitemap、robots 和本地化 404。
 
-### 7.1 上传文件流程
+### 3.2 当前不包含
+
+- 用户注册、登录和权限系统。
+- 云端保存用户上传的整合包。
+- 服务端异步转换队列。
+- 跨设备转换历史。
+- 批量转换。
+- 支付、订阅和后台管理系统。
+- 通用 ZIP 编辑器或任意 ZIP 到 MRPack 的猜测式转换。
+- CurseForge 以外的 ZIP 清单格式导入。
+
+## 4. 路由与本地化
+
+### 4.1 Canonical 页面
+
+| 路由 | 语言 | 页面 |
+| --- | --- | --- |
+| `/` | English | MRPack to ZIP |
+| `/zh` | 简体中文 | MRPack 转 ZIP |
+| `/zip-to-mrpack` | English | CurseForge ZIP to MRPack |
+| `/zh/zip-to-mrpack` | 简体中文 | CurseForge ZIP 转 MRPack |
+
+### 4.2 路由规则
+
+- 英文以根路径为默认语言。
+- `/en` 永久重定向到 `/`。
+- `/en/zip-to-mrpack` 永久重定向到 `/zip-to-mrpack`。
+- 英文和中文页面使用独立的静态 `lang` 属性。
+- 未匹配路径返回对应语言的 404 HTML，并标记 `noindex`。
+- sitemap 只包含四个 canonical 页面，不包含 API Route、重定向入口和 404。
+
+## 5. MRPack 转 ZIP
+
+### 5.1 输入模式
+
+#### Project ID / slug
+
+用户输入 Modrinth 项目 ID 或 slug。浏览器调用：
 
 ```text
-用户选择 .mrpack
--> File API 读取 ArrayBuffer
--> JSZip 加载压缩包
--> 读取 modrinth.index.json
--> 复制 overrides
--> 下载引用文件
--> 如有失败，添加 FAILED_DOWNLOADS.txt
--> 添加 pack-info.json
--> 生成 ZIP Blob
--> 下载 ZIP
+GET https://api.modrinth.com/v2/project/{id_or_slug}/version?include_changelog=false
 ```
 
-### 7.2 Project ID 流程
+当前行为：
+
+- 输入在发起请求前必须去除首尾空白且不得为空。
+- API 响应根节点必须是数组。
+- 每个版本必须包含 `files` 数组。
+- 按 API 返回顺序查找第一个文件名以 `.mrpack` 结尾的文件。
+- 找不到 `.mrpack` 时立即报错，不进入后续转换。
+- 找到后从返回的 URL 下载源 `.mrpack`。
+
+#### 直接 URL
+
+用户输入一个 HTTP 或 HTTPS URL。
+
+当前行为：
+
+- 拒绝空值和非 HTTP(S) 协议。
+- 检查响应状态。
+- 同时通过 `Content-Length` 和流式读取执行 100 MB 源文件上限。
+- URL 路径没有合法 `.mrpack` 文件名时使用 `downloaded-pack.mrpack` 作为源文件名。
+
+#### 本地上传
+
+用户选择或拖入 `.mrpack` 文件。
+
+当前行为：
+
+- UI 文件选择和拖放入口只接受 `.mrpack` 扩展名。
+- 选择文件后自动开始转换。
+- 在读取前检查可用的 `File.size`，读取后再次检查实际字节数。
+- 本地源 `.mrpack` 不会作为完整文件上传到本站服务器。
+
+### 5.2 解析与校验
+
+转换器使用 JSZip 将 `.mrpack` 作为 ZIP 读取，并执行：
+
+1. 校验源文件大小。
+2. 加载归档。
+3. 读取根目录 `modrinth.index.json`。
+4. 解析 `name`、`versionId`、`dependencies` 和 `files`。
+5. 校验每个引用文件的 `path`、`downloads`、可选 `hashes` 与可选 `fileSize`。
+6. 收集 `overrides/`、`client-overrides/`、`server-overrides/` 下的文件。
+
+`modrinth.index.json.files` 最多允许 3000 项。缺少索引、JSON 无法解析、字段类型错误或超出数量限制时，整个转换立即失败。
+
+### 5.3 Overrides 处理
+
+当前支持三个前缀：
+
+- `overrides/`
+- `client-overrides/`
+- `server-overrides/`
+
+写入输出 ZIP 时移除前缀并保留后续相对路径。例如：
 
 ```text
-用户输入 project ID 或 slug
--> 请求 Modrinth 项目版本列表
--> 找到第一个 .mrpack 文件
--> 下载 .mrpack
--> 进入标准转换流程
+overrides/config/example.toml -> config/example.toml
 ```
 
-### 7.3 直接 URL 流程
+目录项不写入输出。非上述三个前缀下的源归档文件不会作为 override 复制。
+
+### 5.4 引用文件下载
+
+对每个 `files[]` 条目按顺序处理：
+
+- 依次尝试 `downloads[]` 中的 HTTP(S) URL，直到一个通过全部校验。
+- 非法 URL、非成功状态、不可读响应、体积超限、`fileSize` 不一致或哈希不匹配都会记录原因并尝试下一个 URL。
+- 若存在 `sha512`，优先校验 SHA-512。
+- 没有 `sha512` 但存在 `sha1` 时校验 SHA-1。
+- 没有受支持哈希时只执行路径、状态和体积相关校验。
+- 单个条目全部失败不会终止整个转换。
+- 当前下载按文件顺序串行执行。
+
+### 5.5 体积与数量限制
+
+| 限制 | 当前值 |
+| --- | ---: |
+| MRPack 源文件 | 100 MB |
+| `files[]` 条目数 | 3000 |
+| 单个引用文件 | 250 MB |
+| 单次转换引用文件累计下载量 | 1 GB |
+
+限制同时利用清单中的 `fileSize`、HTTP `Content-Length` 和实际流式读取字节数，不能只依赖请求头。
+
+### 5.6 输出 ZIP
+
+输出由以下内容组成：
+
+- 去除 override 前缀后的本地文件。
+- 成功下载并通过校验的引用文件。
+- 存在失败引用文件时生成的 `FAILED_DOWNLOADS.txt`。
+- 每次转换都生成的 `pack-info.json`。
+
+`FAILED_DOWNLOADS.txt` 包含：
+
+- 目标路径。
+- 尝试过的 URL。
+- 每次失败的具体原因。
+- 手动补齐文件的说明。
+
+`pack-info.json` 当前包含：
+
+- `name`
+- `versionId`
+- `minecraftVersion`
+- `referencedFileCount`
+- `overrideFileCount`
+- `failedDownloadCount`
+
+输出 MIME 类型为 `application/zip`。输出文件名基于源 `.mrpack` 文件名生成，并替换不安全的文件名字符。
+
+### 5.7 进度阶段
+
+UI 展示以下阶段：
+
+1. `fetching-source`
+2. `loading-archive`
+3. `reading-index`
+4. `collecting-overrides`
+5. `downloading-files`
+6. `building-zip`
+
+下载阶段同时展示已处理文件数和总文件数。成功后页面展示源文件名、输出文件名、引用文件数、override 数和失败数，并由用户点击按钮下载 ZIP。
+
+### 5.8 MRPack 转 ZIP 验收标准
+
+- 三种输入模式都进入同一套标准转换流程。
+- 非 `.mrpack` 本地文件在转换前被拒绝。
+- 缺少或损坏的 `modrinth.index.json` 返回具体错误。
+- overrides 正确去除前缀并写入输出。
+- 引用文件按备用 URL 顺序尝试。
+- `fileSize`、SHA-512 或 SHA-1 不一致的内容不能写入输出。
+- 部分引用下载失败时仍生成 ZIP，并包含 `FAILED_DOWNLOADS.txt`。
+- 全部引用下载成功时不生成 `FAILED_DOWNLOADS.txt`。
+- 每个成功输出都包含 `pack-info.json`。
+- UI 进度百分比和文件计数保持有限且合法。
+
+## 6. CurseForge ZIP 转 MRPack
+
+### 6.1 输入约束
+
+当前入口只接受 CurseForge 导出的 `.zip`，不是任意 ZIP。
+
+输入必须满足：
+
+- 文件名以 `.zip` 结尾。
+- 归档可被 JSZip 读取。
+- 根目录包含 `manifest.json`。
+- `manifestType` 为 `minecraftModpack`。
+- `manifestVersion` 为 `1`。
+- `minecraft.version` 为非空字符串。
+- `minecraft.modLoaders` 为非空数组，并且恰好有一个 `primary: true`。
+- `files` 为数组，每项包含正整数 `projectID`、`fileID` 和布尔值 `required`。
+- `overrides` 是安全的相对路径。
+
+选择合法 ZIP 后，页面自动开始转换。
+
+### 6.2 转换数据流
 
 ```text
-用户输入 .mrpack URL
--> fetch 该 URL
--> 读取 ArrayBuffer
--> 进入标准转换流程
+浏览器读取 CurseForge ZIP
+-> 读取并校验 manifest.json
+-> 收集 manifest 指定 overrides 目录下的文件
+-> POST /api/curseforge/files 查询文件元数据
+-> 读取 CurseForge SHA-1
+-> POST Modrinth /v2/version_files 执行哈希匹配
+-> 匹配项写入 modrinth.index.json files[]
+-> 未匹配项经 /api/curseforge/download 下载
+-> 未匹配项写入 overrides/mods/
+-> 生成并下载 .mrpack
 ```
 
-## 8. UI 需求
+### 6.3 CurseForge 元数据代理
 
-### 8.1 主页面
+浏览器调用：
 
-主页面应包含：
+```text
+POST /api/curseforge/files
+```
 
-- 顶部导航
-- Hero 首屏
-- 转换器卡片
-- `.mrpack` 说明
-- 转换步骤说明
-- 启动器兼容性内容
-- FAQ
-- 页脚链接
+服务端 Route 调用：
 
-### 8.2 转换器卡片
+```text
+POST https://api.curseforge.com/v1/mods/files
+```
 
-转换器卡片必须包含三个 Tab：
+当前规则：
 
-1. Project ID
-2. From URL
-3. Upload File
+- 请求中传递 `projectId` 与 `fileId`，二者必须是正的 32 位整数范围 ID。
+- 单次元数据请求最多接受 3000 个文件引用。
+- 服务端从 `CURSEFORGE_API_KEY` 读取密钥，并通过 `x-api-key` 请求官方 API。
+- 密钥缺失时返回明确的 500 错误。
+- CurseForge 响应必须包含结构合法的 `data` 数组。
+- 返回元数据必须与清单中的 project ID / file ID 对应，且文件必须可用。
 
-每个 Tab 都应该只有一个清晰的主操作。
+### 6.4 Modrinth 哈希匹配
 
-### 8.3 状态设计
+转换器从 CurseForge 元数据读取算法编号为 `1` 的 SHA-1，并由浏览器调用：
 
-转换器必须支持以下状态：
+```text
+POST https://api.modrinth.com/v2/version_files
+```
 
-| 状态 | 含义 |
-| --- | --- |
-| idle | 等待输入。 |
-| fetching | 获取项目信息或远程 `.mrpack`。 |
-| reading | 读取本地文件或已下载文件。 |
-| extracting | 解析 `.mrpack`。 |
-| downloading | 下载引用的 mod 文件。 |
-| packaging | 生成 ZIP。 |
-| done | ZIP 已生成。 |
-| error | 转换失败。 |
+请求使用：
 
-### 8.4 进度展示
+```json
+{
+  "hashes": ["..."],
+  "algorithm": "sha1"
+}
+```
 
-进度 UI 应展示：
+匹配成功的文件会成为 `modrinth.index.json.files[]` 引用项，包含：
 
-- 当前步骤
-- 百分比
-- 下载 mod 时显示当前文件名
-- 可用时展示已处理文件数量
-- 最终成功或警告信息
+- `mods/{filename}` 路径。
+- Modrinth HTTPS 下载 URL。
+- Modrinth 返回的 hashes。
+- 可用时包含 `fileSize`。
+
+当前生成器要求匹配项至少包含 `sha1` 和 `sha512`，并拒绝空下载列表、非 HTTPS URL、不安全路径和重复输出路径。
+
+### 6.5 CurseForge-only 文件
+
+无法在 Modrinth 按 SHA-1 匹配的文件会通过：
+
+```text
+POST /api/curseforge/download
+```
+
+服务端下载前会再次查询并核对 CurseForge 元数据，然后执行：
+
+- project ID 与 file ID 匹配校验。
+- `isAvailable` 校验。
+- 下载 URL 必须使用 HTTPS。
+- 下载主机必须严格等于 `edge.forgecdn.net`。
+- CDN 响应必须成功且包含可读 body。
+
+成功下载的 CurseForge-only 文件写入：
+
+```text
+overrides/mods/{safeFileName}
+```
+
+文件名不得为空、不得包含路径分隔符，也不得为 `.` 或 `..`。
+
+与 MRPack 转 ZIP 的“部分失败继续输出”不同，当前 ZIP 转 MRPack 流程在必需元数据、匹配或 CurseForge-only 下载失败时会终止并显示错误，不生成不完整结果。
+
+### 6.6 生成 `modrinth.index.json`
+
+输出索引固定包含：
+
+```json
+{
+  "formatVersion": 1,
+  "game": "minecraft",
+  "name": "...",
+  "versionId": "...",
+  "dependencies": {},
+  "files": []
+}
+```
+
+字段规则：
+
+- 缺少包名时使用 `Converted Pack`。
+- 缺少版本时使用 `1.0.0`。
+- `dependencies.minecraft` 来自 CurseForge manifest。
+- 主加载器 ID 被转换为对应依赖名和版本。
+- 当前支持 Forge、NeoForge、Fabric Loader 和 Quilt Loader 的已实现 ID 前缀。
+- 无法识别的主加载器格式立即失败。
+
+### 6.7 输出 MRPack
+
+输出包含：
+
+- 生成的 `modrinth.index.json`。
+- CurseForge overrides，统一写入 `overrides/`。
+- CurseForge-only 文件，写入 `overrides/mods/`。
+
+输出 MIME 类型为：
+
+```text
+application/x-modrinth-modpack+zip
+```
+
+输出文件名基于输入 ZIP 文件名生成，并替换不安全字符，扩展名改为 `.mrpack`。
+
+### 6.8 进度阶段
+
+UI 展示以下阶段：
+
+1. `reading-zip`
+2. `reading-manifest`
+3. `resolving-curseforge-files`
+4. `matching-modrinth-files`
+5. `downloading-curseforge-files`（仅存在 CurseForge-only 文件时）
+6. `building-mrpack`
+
+成功后展示 Modrinth 匹配数量和 CurseForge 打包数量，并由用户点击按钮下载 MRPack。
+
+### 6.9 ZIP 转 MRPack 验收标准
+
+- 非 `.zip` 文件在读取前被拒绝。
+- 缺少或损坏的 `manifest.json` 返回具体错误。
+- manifest 字段类型和 ID 范围受到严格校验。
+- 本地 ZIP 在浏览器读取，不作为完整转换任务上传。
+- CurseForge API 密钥只在服务端读取。
+- Modrinth 匹配项写入 `files[]`，不重复打包二进制内容。
+- CurseForge-only 文件安全写入 `overrides/mods/`。
+- 原 overrides 保留相对结构并写入 `overrides/`。
+- 不安全路径、重复输出路径、非 HTTPS 匹配 URL 和非白名单 CDN 主机被拒绝。
+- 输出包含合法的 `modrinth.index.json`，MIME 类型正确。
+
+## 7. API、网络与隐私边界
+
+### 7.1 外部请求矩阵
+
+| 场景 | 发起方 | 目标 | 是否需要本站服务端 |
+| --- | --- | --- | --- |
+| Project ID / slug 查询 | 浏览器 | Modrinth project versions API | 否 |
+| `.mrpack` URL 下载 | 浏览器 | 用户提供的 HTTP(S) URL | 否 |
+| MRPack 引用文件下载 | 浏览器 | `downloads[]` 中的 HTTP(S) URL | 否 |
+| CurseForge 元数据查询 | 服务端 API Route | CurseForge files API | 是 |
+| SHA-1 匹配 | 浏览器 | Modrinth `version_files` API | 否 |
+| CurseForge-only 文件下载 | 服务端 API Route | CurseForge API 与 `edge.forgecdn.net` | 是 |
+
+### 7.2 环境变量
+
+| 变量 | 必需性 | 用途 |
+| --- | --- | --- |
+| `CURSEFORGE_API_KEY` | ZIP 转 MRPack 必需 | 服务端请求 CurseForge API。 |
+| `NEXT_PUBLIC_SITE_URL` | 可选 | 覆盖 SEO 使用的站点 origin；默认 `https://mrpacktozip.pro`。 |
+
+`NEXT_PUBLIC_SITE_URL` 只接受：
+
+- HTTPS origin；或
+- `localhost` / `127.0.0.1` 的 HTTP origin。
+
+它不得包含额外路径、query 或 hash。非法值在生成 metadata 时立即报错。
+
+### 7.3 隐私边界
+
+- 本地 `.mrpack` 和 CurseForge ZIP 都在浏览器中读取。
+- Project ID、远程 URL 和引用文件模式会产生正常的第三方网络请求。
+- ZIP 转 MRPack 会把 manifest 中的 CurseForge project/file ID 发送到本站 API Route。
+- CurseForge-only 文件内容会经过本站服务端 Route 流式转发。
+- 当前没有用户账户、云存储或转换历史持久化实现。
+- 产品文案不得宣称“整个流程完全离线”或“所有数据永不经过服务器”。
+
+## 8. UI 与交互要求
+
+### 8.1 通用页面结构
+
+- 顶部品牌与导航。
+- 英文/中文切换。
+- 可切换的视觉发光效果。
+- Hero、转换器、原理说明、限制说明和 FAQ。
+- 响应式桌面与移动布局。
+- MRPack 转 ZIP 与 ZIP 转 MRPack 页面保持一致的主容器宽度体系。
+
+### 8.2 转换交互
+
+- MRPack 转 ZIP 提供三个输入模式卡片。
+- 本地文件选择或拖放后自动转换。
+- Project ID 和 URL 模式由明确按钮提交，不在每次键入时请求网络。
+- 进行中禁用会产生冲突的文件选择操作。
+- 新转换使用独立 run ID，过期异步结果不得覆盖当前状态。
+- 成功后不会强制自动下载，由用户点击下载按钮。
+- 用户可以清除结果并重新开始。
+
+### 8.3 可访问性
+
+- 进度使用合法的百分比和可读文本。
+- 文件计数必须同时具有当前值和总值，否则 Fail Fast。
+- 当前计数不得为负数或大于总数。
+- FAQ 支持逐项展开、悬停展开以及展开/收起全部。
+- 活动导航项使用 `aria-current`。
+- 发光开关使用 `aria-pressed` 与明确标签。
 
 ## 9. 错误处理
 
-产品必须快速失败，并给出具体错误。
+### 9.1 错误分类
 
-| 错误场景 | 用户提示 |
-| --- | --- |
-| 上传非 `.mrpack` 文件 | 请选择有效的 `.mrpack` 文件。 |
-| 缺少 `modrinth.index.json` | 无效 `.mrpack`：缺少 `modrinth.index.json`。 |
-| JSON 无法解析 | 无效 `modrinth.index.json`：无法解析文件。 |
-| 项目不存在 | 项目不存在，请检查 ID 或 slug 后重试。 |
-| 项目没有 `.mrpack` | 该项目没有找到 `.mrpack` 文件。 |
-| 直接 URL 下载失败 | 下载 `.mrpack` 文件失败，请检查 URL 后重试。 |
-| CORS 阻止下载 | 浏览器安全策略阻止了该下载，请尝试其他来源或手动下载。 |
-| ZIP 生成失败 | 生成 ZIP 失败，请尝试较小的整合包或关闭其他浏览器标签页。 |
+共享转换错误代码包括：
 
-实现规则：
+- `invalid_input`
+- `invalid_path`
+- `invalid_url`
+- `invalid_mrpack`
+- `modrinth_api_error`
+- `download_failed`
+- `zip_build_failed`
 
-- 不允许静默吞掉错误。
-- 单个 mod 下载失败时，应记录到 `FAILED_DOWNLOADS.txt`。
-- 整个包无法解析或无法打包时，应展示阻塞错误。
+### 9.2 处理原则
 
-## 10. 安全需求
+- 输入边界、第三方响应和归档字段必须校验具体值。
+- 不能静默吞掉未知异常。
+- 可恢复的 MRPack 引用文件失败写入 `FAILED_DOWNLOADS.txt`。
+- 不能安全恢复的归档、清单、路径、API 或打包错误立即终止。
+- UI 根据英文或中文页面输出本地化错误类别与结构化细节。
+- 未识别的异常仍显示本地化兜底信息，不直接向用户展示空状态。
 
-### 10.1 路径安全
+## 10. 安全要求
 
-写入 ZIP 前必须校验 `.mrpack` 中的所有路径。
+### 10.1 归档路径安全
 
-拒绝或净化以下路径：
+所有进入输出归档的路径必须拒绝：
 
-- 包含 `..`
-- 以 `/` 开头
-- 以 `\` 开头
-- 包含 Windows 盘符前缀，例如 `C:`
-- 包含空字节
-- trim 后为空
+- 空字符串或仅空白。
+- 空字节。
+- `/` 或 `\` 开头的绝对路径。
+- Windows 盘符前缀。
+- 反斜杠。
+- 空路径段。
+- `.` 路径段。
+- `..` 路径段。
 
-验收标准：
+输出构建器还必须拒绝重复目标路径，避免后写内容覆盖先写内容。
 
-- 恶意 `path` 不能生成危险的压缩包路径。
-- 不安全条目应被跳过，并写入 `FAILED_DOWNLOADS.txt` 或专门的警告文件。
+### 10.2 URL 与代理边界
 
-### 10.2 下载 URL 安全
+- 浏览器侧 MRPack 下载只接受 HTTP(S)。
+- ZIP 转 MRPack 生成的 Modrinth 引用必须是 HTTPS。
+- CurseForge 服务端下载只允许 HTTPS 且主机严格为 `edge.forgecdn.net`。
+- CurseForge 下载 Route 必须根据官方 API 元数据重新解析 URL，不能接受浏览器提交任意下载 URL。
 
-MVP 行为：
+### 10.3 密钥安全
 
-- 尝试 `downloads[]` 中列出的 URL。
-- 不执行下载内容。
-- 所有下载内容都按二进制文件处理。
+- `CURSEFORGE_API_KEY` 只从服务端环境读取。
+- 浏览器请求和前端 bundle 不得包含该密钥。
+- API Route 错误不得回显密钥值。
 
-未来增强：
+## 11. 性能与资源边界
 
-- 允许只从 Modrinth CDN 等已知域名下载。
-- 当下载来源是未知域名时给用户提示。
+### 11.1 当前实现特征
 
-### 10.3 Hash 校验
+- JSZip 会把输入、下载内容和输出保存在内存中。
+- MRPack 引用文件当前串行下载，优先保证行为简单和错误可追踪。
+- MRPack 转 ZIP 已有明确的源文件、单文件、累计下载和清单数量限制。
+- ZIP 转 MRPack 当前没有独立的 ZIP 大小、清单文件数或累计打包体积上限。
+- 两条转换链路都受浏览器内存和第三方网络质量影响。
 
-推荐 MVP+ 支持：
+### 11.2 当前用户提示
 
-- 如果 `hashes` 存在，尽量使用 Web Crypto 校验下载文件。
-- 如果条目中包含 SHA-1 或 SHA-512，应支持对应校验。
+- 页面必须说明浏览器转换的资源限制。
+- 第三方 URL 可能因 CORS、限流、临时不可用或响应异常而失败。
+- 受保护的 CurseForge 代理不可用时，ZIP 转 MRPack 无法完成。
 
-如果 MVP 不做 hash 校验，UI 和文案不得宣称“已验证下载完整性”。
+## 12. SEO 要求
 
-## 11. 性能需求
+### 12.1 页面 metadata
 
-浏览器应能流畅处理常见整合包。
+四个 canonical 页面各自提供：
 
-需求：
+- 本地化 title 和 description。
+- canonical URL。
+- `en`、`zh-Hans` 和 `x-default` hreflang。
+- Open Graph metadata。
+- Twitter summary large image metadata。
 
-- 长任务期间展示进度。
-- 避免重复 API 请求。
-- 单次转换中避免重复下载同一个 URL。
-- 并发下载数量限制在较小范围，例如 4-6。
-- 提示超大整合包会受浏览器内存限制。
+### 12.2 结构化数据
 
-已知限制：
+两个转换器页面都输出可解析的 JSON-LD：
 
-- JSZip 会带来较高内存压力，因为源文件、下载文件和最终 ZIP 都可能同时存在于浏览器内存中。
+- `WebApplication`
+- `FAQPage`
 
-未来优化：
+FAQ JSON-LD 必须来自对应页面当前文案，避免页面内容与结构化数据分叉。
 
-- 使用 Web Worker 生成 ZIP，避免主线程卡顿。
-- 研究更适合大文件的流式 ZIP 生成方案。
+### 12.3 robots 与 sitemap
 
-## 12. SEO 需求
+- robots 允许抓取页面。
+- robots 禁止抓取 `/api/`。
+- robots 指向绝对 sitemap URL。
+- sitemap 仅列出四个 canonical 页面。
 
-MVP 应包含基础 SEO 页面和元信息。
+## 13. 技术架构
 
-首页需求：
-
-- Title 聚焦 `MRPack to ZIP Converter`。
-- Meta description 说明免费、浏览器端转换。
-- Canonical URL。
-- Open Graph 信息。
-- SoftwareApplication JSON-LD。
-- FAQ 内容。
-- 预留 Blog 内容结构。
-
-推荐页面：
-
-- `/`
-- `/zip-to-mrpack` 占位页或未来页面
-- `/blog`
-- `/about`
-- `/privacy`
-- `/terms`
-- `/contact`
-
-## 13. 统计与变现
-
-统计和广告不是 MVP 必需功能。
-
-如果接入：
-
-- 不得追踪上传文件内容。
-- 不得为了统计上传 `.mrpack` 内容。
-- 需要明确说明页面可能加载第三方脚本。
-
-可选服务：
-
-- Google Analytics
-- Google AdSense
-- 其他广告网络
-
-## 14. MVP 验收清单
-
-满足以下条件时，MVP 可视为完成：
-
-- 本地上传模式可以将合法 `.mrpack` 转换为 ZIP。
-- Project ID 模式可以通过 Modrinth API 获取版本并转换找到的 `.mrpack`。
-- 直接 URL 模式可以下载并转换有效 `.mrpack`。
-- `overrides/` 文件被写入输出 ZIP。
-- 可访问的引用 mod 文件被下载并写入输出 ZIP。
-- 下载失败文件被记录到 `FAILED_DOWNLOADS.txt`。
-- 应用展示 fetching、reading、extracting、downloading、packaging 等进度。
-- 错误信息具体且可操作。
-- 用户上传的本地 `.mrpack` 不会发送到本产品服务器。
-- 用户输入过程中不会每个字符都触发 API 请求。
-- 写入 ZIP 前会校验路径安全。
-
-## 15. 建议技术架构
-
-### 15.1 前端技术栈
-
-推荐技术栈：
+### 13.1 技术栈
 
 - Next.js App Router
-- React
+- React 19
 - TypeScript
-- Tailwind CSS
-- shadcn/ui，可在合适场景使用
-- JSZip 或同类 ZIP 库
+- Tailwind CSS 4
+- Radix UI / shadcn 风格组件
+- JSZip
+- Vitest
 
-### 15.2 建议模块边界
-
-使用职责清晰的小模块。
+### 13.2 模块边界
 
 ```text
-src/lib/modrinth-api.ts
-  - fetchProjectVersions(projectIdOrSlug)
-  - findMrpackFile(versions)
+components/localized-converter-page.tsx
+  MRPack 转 ZIP 页面状态、输入模式和结果 UI
 
-src/lib/mrpack-parser.ts
-  - loadMrpack(arrayBuffer)
-  - readModrinthIndex(zip)
-  - collectOverrideFiles(zip)
+components/localized-zip-to-mrpack-page.tsx
+  ZIP 转 MRPack 页面状态、自动转换和结果 UI
 
-src/lib/path-safety.ts
-  - validateArchivePath(path)
-  - normalizeOverridePath(path, prefix)
+lib/mrpack/conversion-workflow.ts
+  MRPack 三种输入源调度
 
-src/lib/downloader.ts
-  - downloadFirstAvailableUrl(urls)
-  - downloadReferencedFiles(files)
+lib/mrpack/conversion-runner.ts
+  MRPack 转 ZIP 主流程调度
 
-src/lib/zip-builder.ts
-  - createOutputZip()
-  - addOverrideFiles()
-  - addDownloadedFiles()
-  - addFailedDownloadsFile()
-  - generateZipBlob()
+lib/mrpack/mrpack-parser.ts
+  读取和校验 modrinth.index.json、收集 overrides
 
-src/components/converter/
-  - ConverterCard
-  - ProjectIdTab
-  - UrlTab
-  - UploadFileTab
-  - ProgressPanel
-  - ResultPanel
-  - ErrorPanel
+lib/mrpack/referenced-file-downloader.ts
+  下载备用 URL、执行体积/fileSize/hash 校验
+
+lib/mrpack/path-safety.ts
+  归档路径校验与 override 路径归一化
+
+lib/mrpack/zip-builder.ts
+  组装 ZIP、失败报告和 pack-info
+
+lib/zip-to-mrpack/conversion-workflow.ts
+  CurseForge ZIP 转 MRPack 主流程调度
+
+lib/curseforge/archive-reader.ts
+  读取 CurseForge ZIP、manifest 和 overrides
+
+lib/curseforge/manifest-parser.ts
+  严格校验 CurseForge manifest
+
+lib/curseforge-api/*
+  CurseForge 客户端协议、服务端请求与响应校验
+
+lib/zip-to-mrpack/modrinth-version-files.ts
+  使用 SHA-1 查询 Modrinth 匹配项
+
+lib/zip-to-mrpack/modrinth-index-builder.ts
+  生成并校验 modrinth.index.json
+
+lib/zip-to-mrpack/mrpack-builder.ts
+  组装最终 MRPack
+
+lib/i18n/*
+  双语文案与本地化错误格式
+
+lib/seo/*
+  metadata、canonical、hreflang、sitemap、robots、JSON-LD 和 404
 ```
 
-规则：
+### 13.3 设计原则
 
-- 转换逻辑不要写在 React 组件里。
-- 组件负责 UI 状态调度，不负责 ZIP 内部解析细节。
-- 每个函数只做一件清楚的事。
-- 不要 catch 自己无法处理的异常；如果 catch，必须补充有价值的上下文或完成明确恢复。
+- React 组件负责交互状态和调度，不实现归档内部算法。
+- 解析、下载、路径校验和输出构建分离为职责明确的函数模块。
+- 模块之间使用显式输入和返回类型通信。
+- 数据边界执行严格校验并返回包含问题值或字段路径的错误。
+- 不为尚未出现的扩展需求预建抽象层。
 
-## 16. 待确认决策
+## 14. 测试与验证
 
-实现前建议确认：
+### 14.1 自动化测试范围
 
-1. Hash 校验放在 MVP 还是 V1.1。
-2. 是否现在增加后端代理，还是等前端直连出现问题后再加。
-3. MVP 是否接入广告或统计。
-4. ZIP to MRPack 是隐藏、标记 coming soon，还是完全不出现在导航中。
-5. 未知下载域名是静默允许，还是给出提示。
+当前测试覆盖：
 
-推荐默认值：
+- MRPack 三种来源与完整转换管线。
+- Modrinth API URL、响应解析和无 `.mrpack` 场景。
+- `modrinth.index.json` 解析、数量限制与字段校验。
+- overrides、路径安全和重复输出路径。
+- 引用文件备用 URL、体积、`fileSize`、SHA-1、SHA-512 与累计限制。
+- `FAILED_DOWNLOADS.txt`、`pack-info.json` 和 ZIP 构建。
+- CurseForge manifest、元数据 API、下载代理和 CDN 白名单。
+- CurseForge/Modrinth SHA-1 匹配与 MRPack 构建。
+- 双语文案、路由、重定向和本地化错误。
+- 进度百分比、文件计数、过期转换 run 隔离。
+- canonical、hreflang、结构化数据、sitemap、robots 和本地化 404。
+- 关键 UI 结构与双页面宽度一致性。
 
-- Hash 校验：放到 V1.1，除非时间充足。
-- 后端代理：MVP 不做。
-- 广告/统计：MVP 不做，除非发布时必须变现。
-- ZIP to MRPack：MVP 不在导航中展示，直到功能完成。
-- 未知域名：MVP 允许下载，但下载失败要清晰记录。
+### 14.2 标准验证命令
+
+```bash
+pnpm test
+pnpm typecheck
+pnpm build
+```
+
+当前 `package.json` 没有独立的 `lint` script，不应把 `pnpm lint` 写入必跑命令。
+
+### 14.3 发布验收
+
+发布前至少确认：
+
+- 三种 MRPack 来源都能进入转换流程。
+- 合法 `.mrpack` 可以生成可打开的 ZIP。
+- 合法 CurseForge 导出 ZIP 可以生成可打开的 MRPack。
+- 缺少 `CURSEFORGE_API_KEY` 时 ZIP 转 MRPack 显示明确错误。
+- 两种语言的四个 canonical 页面可访问。
+- 语言切换、重定向、404、sitemap 和 robots 行为与测试一致。
+- `pnpm test`、`pnpm typecheck`、`pnpm build` 全部通过。
+
+## 15. 已知限制
+
+- MRPack 转 ZIP 依赖第三方下载 URL 允许浏览器访问；CORS 无法由当前前端绕过。
+- 引用文件按顺序下载，大型整合包耗时可能较长。
+- JSZip 不是流式归档实现，大包会产生明显内存压力。
+- ZIP 转 MRPack 仅支持带合法 `manifest.json` 的 CurseForge 导出包。
+- ZIP 转 MRPack 依赖 `CURSEFORGE_API_KEY`、CurseForge API、Modrinth API 和允许的 CurseForge CDN 主机。
+- ZIP 转 MRPack 当前没有与 MRPack 转 ZIP 对等的显式体积和数量上限。
+- CurseForge-only 文件下载后会被打包，但当前没有对其内容再次执行哈希校验。
+- 当前没有重试队列、服务端转换任务或断点续传。
+
+## 16. 后续规划
+
+以下项目尚未实现，不属于当前版本验收标准：
+
+### 16.1 安全与可靠性
+
+- 为 ZIP 转 MRPack 增加明确的源 ZIP、清单数量、单文件和累计体积限制。
+- 对 CurseForge-only 文件执行下载长度与哈希校验。
+- 根据真实 CDN 兼容需求审慎扩展服务端下载主机白名单。
+- 增加第三方 API 的超时、有限重试、缓存和可观测性。
+
+### 16.2 性能
+
+- 在不破坏错误可追踪性的前提下评估有限并发下载。
+- 评估 Web Worker，降低归档生成对主线程的影响。
+- 评估更适合大文件的流式读取与流式归档方案。
+
+### 16.3 产品能力
+
+- 批量转换。
+- 本地转换历史或可选账户同步。
+- 更多明确有清单规范的整合包格式。
+- 在有明确商业需求后再评估统计、广告或付费能力。
+
+任何后续规划进入开发前，都需要单独确认使用场景、范围、风险、验收标准和验证方式。
