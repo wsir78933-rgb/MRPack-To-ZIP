@@ -32,6 +32,13 @@ export async function fetchCurseForgeFilesByIds(
   if (!response.ok) {
     throw new CurseForgeApiResponseError(
       `CurseForge files API returned ${response.status} ${response.statusText}.`,
+      {
+        reason: "curseforge_files_api_http_error",
+        details: {
+          status: response.status,
+          statusText: response.statusText,
+        },
+      },
     );
   }
 
@@ -41,6 +48,12 @@ export async function fetchCurseForgeFilesByIds(
   } catch (caughtError) {
     throw new CurseForgeApiResponseError(
       `CurseForge files API returned invalid JSON: ${formatErrorReason(caughtError)}.`,
+      {
+        reason: "curseforge_files_api_invalid_json",
+        details: {
+          parseError: formatErrorReason(caughtError),
+        },
+      },
     );
   }
 
@@ -162,7 +175,13 @@ function createCurseForgeApiValidationError(
 ) {
   return new CurseForgeApiResponseError(
     `Invalid CurseForge files API response at ${fieldPath}: ${formatProblemValue(problemValue)}. Expected ${expectedDescription}.`,
-    fieldPath,
-    problemValue,
+    {
+      reason: "curseforge_files_api_invalid_response",
+      details: {
+        expectedDescription,
+        fieldPath,
+        problemValue,
+      },
+    },
   );
 }

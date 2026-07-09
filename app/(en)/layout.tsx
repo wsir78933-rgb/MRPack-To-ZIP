@@ -1,10 +1,13 @@
 import '../globals.css';
 import type { Metadata } from 'next';
 
+import { buildPageMetadata } from '@/lib/seo/site-metadata';
+
+const englishHomePageMetadata = buildPageMetadata('/');
+
 export const metadata: Metadata = {
-  title: 'MRPack to ZIP Converter - Free Online Modrinth Modpack Tool',
-  description:
-    'Use this MRPack converter to turn Modrinth .mrpack files, project slugs, or download links into launcher-ready ZIP files in your browser.',
+  title: englishHomePageMetadata.title,
+  description: englishHomePageMetadata.description,
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
     shortcut: [{ url: '/icon.svg', type: 'image/svg+xml' }],

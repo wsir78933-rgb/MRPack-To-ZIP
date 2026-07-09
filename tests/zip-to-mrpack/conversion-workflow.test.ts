@@ -5,6 +5,7 @@ import {
   runZipToMrpackConversionWorkflow,
   type ZipToMrpackConversionProgress,
 } from "@/lib/zip-to-mrpack/conversion-workflow";
+import { conversionErrorCodes } from "@/lib/mrpack/errors";
 
 async function createCurseForgeZipBuffer() {
   const curseForgeZip = new JSZip();
@@ -255,6 +256,183 @@ describe("runZipToMrpackConversionWorkflow", () => {
     ).toBe(false);
   });
 
+  test("matches an unavailable CurseForge file through Modrinth before falling back to download", async () => {
+    const curseForgeZipBuffer = await createCurseForgeZipBuffer();
+    const downloadRequestBodies: string[] = [];
+    const fetchLike = async (url: string, init?: RequestInit) => {
+      if (url === "/api/curseforge/files") {
+        expect(init?.method).toBe("POST");
+        return Response.json({
+          files: [
+            {
+              modId: 111,
+              fileId: 222,
+              fileName: "SodiumTranslations.zip",
+              fileLength: 158836,
+              downloadUrl: null,
+              hashes: [{ value: "sha1-unavailable-matched", algo: 1 }],
+              isAvailable: false,
+            },
+            {
+              modId: 333,
+              fileId: 444,
+              fileName: "matched-two.jar",
+              fileLength: 15,
+              downloadUrl: "https://edge.forgecdn.net/files/444/matched-two.jar",
+              hashes: [{ value: "sha1-matched-two", algo: 1 }],
+              isAvailable: true,
+            },
+          ],
+        });
+      }
+
+      if (url === "https://api.modrinth.com/v2/version_files") {
+        expect(init?.method).toBe("POST");
+        return Response.json({
+          "sha1-unavailable-matched": {
+            files: [
+              {
+                filename: "SodiumTranslations.zip",
+                url: "https://cdn.modrinth.com/data/demo/versions/SodiumTranslations.zip",
+                size: 158836,
+                hashes: {
+                  sha1: "sha1-unavailable-matched",
+                  sha512: "sha512-unavailable-matched",
+                },
+              },
+            ],
+          },
+          "sha1-matched-two": {
+            files: [
+              {
+                filename: "matched-two.jar",
+                url: "https://cdn.modrinth.com/data/demo/versions/matched-two.jar",
+                size: 15,
+                hashes: {
+                  sha1: "sha1-matched-two",
+                  sha512: "sha512-matched-two",
+                },
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === "/api/curseforge/download") {
+        downloadRequestBodies.push(String(init?.body));
+      }
+
+      throw new Error(`Unexpected fetch URL ${url}`);
+    };
+
+    const conversionResult = await runZipToMrpackConversionWorkflow({
+      selectedFile: {
+        name: "unavailable-matched.zip",
+        size: curseForgeZipBuffer.byteLength,
+        arrayBuffer: async () => curseForgeZipBuffer,
+      },
+      fetchLike,
+    });
+
+    expect(conversionResult.matchedFileCount).toBe(2);
+    expect(conversionResult.bundledFileCount).toBe(0);
+    expect(downloadRequestBodies).toEqual([]);
+
+    const mrpackArchive = await JSZip.loadAsync(await conversionResult.outputMrpackBlob.arrayBuffer());
+    const indexJsonText = await mrpackArchive.file("modrinth.index.json")?.async("string");
+    const modrinthIndex = JSON.parse(indexJsonText ?? "{}");
+
+    expect(modrinthIndex.files).toContainEqual({
+      path: "mods/SodiumTranslations.zip",
+      downloads: ["https://cdn.modrinth.com/data/demo/versions/SodiumTranslations.zip"],
+      hashes: {
+        sha1: "sha1-unavailable-matched",
+        sha512: "sha512-unavailable-matched",
+      },
+      env: {
+        client: "required",
+        server: "required",
+      },
+      fileSize: 158836,
+    });
+  });
+
+  test("bundles an unavailable CurseForge file when Modrinth has no matching SHA-1", async () => {
+    const curseForgeZipBuffer = await createCurseForgeZipBuffer();
+    const downloadRequestBodies: string[] = [];
+    const fetchLike = async (url: string, init?: RequestInit) => {
+      if (url === "/api/curseforge/files") {
+        expect(init?.method).toBe("POST");
+        return Response.json({
+          files: [
+            {
+              modId: 111,
+              fileId: 222,
+              fileName: "unavailable-curse-only.jar",
+              fileLength: 10,
+              downloadUrl: "https://edge.forgecdn.net/files/222/unavailable-curse-only.jar",
+              hashes: [{ value: "sha1-unavailable-curse-only", algo: 1 }],
+              isAvailable: false,
+            },
+            {
+              modId: 333,
+              fileId: 444,
+              fileName: "matched-two.jar",
+              fileLength: 15,
+              downloadUrl: "https://edge.forgecdn.net/files/444/matched-two.jar",
+              hashes: [{ value: "sha1-matched-two", algo: 1 }],
+              isAvailable: true,
+            },
+          ],
+        });
+      }
+
+      if (url === "https://api.modrinth.com/v2/version_files") {
+        expect(init?.method).toBe("POST");
+        return Response.json({
+          "sha1-matched-two": {
+            files: [
+              {
+                filename: "matched-two.jar",
+                url: "https://cdn.modrinth.com/data/demo/versions/matched-two.jar",
+                size: 15,
+                hashes: {
+                  sha1: "sha1-matched-two",
+                  sha512: "sha512-matched-two",
+                },
+              },
+            ],
+          },
+        });
+      }
+
+      if (url === "/api/curseforge/download") {
+        downloadRequestBodies.push(String(init?.body));
+        return new Response("unavailable curse-only bytes");
+      }
+
+      throw new Error(`Unexpected fetch URL ${url}`);
+    };
+
+    const conversionResult = await runZipToMrpackConversionWorkflow({
+      selectedFile: {
+        name: "unavailable-curse-only.zip",
+        size: curseForgeZipBuffer.byteLength,
+        arrayBuffer: async () => curseForgeZipBuffer,
+      },
+      fetchLike,
+    });
+
+    expect(conversionResult.matchedFileCount).toBe(1);
+    expect(conversionResult.bundledFileCount).toBe(1);
+    expect(downloadRequestBodies).toEqual([JSON.stringify({ projectId: 111, fileId: 222 })]);
+
+    const mrpackArchive = await JSZip.loadAsync(await conversionResult.outputMrpackBlob.arrayBuffer());
+    await expect(
+      mrpackArchive.file("overrides/mods/unavailable-curse-only.jar")?.async("string"),
+    ).resolves.toBe("unavailable curse-only bytes");
+  });
+
   test("converts a CurseForge ZIP with an empty files list without fake download counts", async () => {
     const curseForgeZip = new JSZip();
     curseForgeZip.file(
@@ -388,7 +566,18 @@ describe("runZipToMrpackConversionWorkflow", () => {
         fetchLike,
         onProgressChange: (progress) => observedProgressEvents.push(progress),
       }),
-    ).rejects.toThrow(/CurseForge mirror is unavailable/);
+    ).rejects.toMatchObject({
+      code: conversionErrorCodes.downloadFailed,
+      context: {
+        reason: "curseforge_route_error",
+        route: "/api/curseforge/download",
+        routeReason: "legacy_route_error",
+        status: 502,
+      },
+      details: {
+        error: "CurseForge mirror is unavailable",
+      },
+    });
 
     expect(downloadRequestBodies).toEqual([
       JSON.stringify({ projectId: 111, fileId: 222 }),

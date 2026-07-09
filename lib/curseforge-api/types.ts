@@ -20,31 +20,48 @@ export type CurseForgeFileMetadata = {
   isAvailable: boolean;
 };
 
+export type CurseForgeApiErrorDetails = Record<string, unknown>;
+
 export class CurseForgeRequestValidationError extends Error {
   readonly status = 400;
   readonly fieldPath: string;
   readonly problemValue: unknown;
+  readonly expectedDescription: string;
 
-  constructor(fieldPath: string, problemValue: unknown, expectedDescription: string) {
+  constructor(
+    fieldPath: string,
+    problemValue: unknown,
+    expectedDescription: string,
+    options?: ErrorOptions,
+  ) {
     super(
       `Invalid CurseForge request body at ${fieldPath}: ${formatProblemValue(problemValue)}. Expected ${expectedDescription}.`,
+      options,
     );
     this.name = "CurseForgeRequestValidationError";
     this.fieldPath = fieldPath;
     this.problemValue = problemValue;
+    this.expectedDescription = expectedDescription;
   }
 }
 
-export class CurseForgeApiResponseError extends Error {
-  readonly status = 502;
-  readonly fieldPath: string | undefined;
-  readonly problemValue: unknown;
+type CurseForgeApiResponseErrorOptions = {
+  reason?: string;
+  details?: CurseForgeApiErrorDetails;
+  status?: number;
+};
 
-  constructor(message: string, fieldPath?: string, problemValue?: unknown) {
+export class CurseForgeApiResponseError extends Error {
+  readonly status: number;
+  readonly reason: string;
+  readonly details: CurseForgeApiErrorDetails;
+
+  constructor(message: string, options: CurseForgeApiResponseErrorOptions = {}) {
     super(message);
     this.name = "CurseForgeApiResponseError";
-    this.fieldPath = fieldPath;
-    this.problemValue = problemValue;
+    this.status = options.status ?? 502;
+    this.reason = options.reason ?? "curseforge_api_response_error";
+    this.details = options.details ?? {};
   }
 }
 

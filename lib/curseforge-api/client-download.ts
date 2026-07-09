@@ -1,4 +1,5 @@
 import { parseCurseForgeFileReference } from "./request-validation";
+import { throwCurseForgeRouteConversionError } from "./route-errors";
 import type { CurseForgeFetchLike, CurseForgeFileReference } from "./types";
 
 const localCurseForgeDownloadRoute = "/api/curseforge/download";
@@ -21,28 +22,8 @@ export async function downloadCurseForgeFileContent(
   });
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to download CurseForge file through ${localCurseForgeDownloadRoute}: ${response.status} ${await readRouteErrorMessage(response)}.`,
-    );
+    await throwCurseForgeRouteConversionError(localCurseForgeDownloadRoute, response);
   }
 
   return response.blob();
-}
-
-async function readRouteErrorMessage(response: Response) {
-  try {
-    const responseJson = await response.json();
-    if (
-      responseJson &&
-      typeof responseJson === "object" &&
-      !Array.isArray(responseJson) &&
-      typeof (responseJson as Record<string, unknown>).error === "string"
-    ) {
-      return (responseJson as Record<string, string>).error;
-    }
-  } catch {
-    return response.statusText;
-  }
-
-  return response.statusText;
 }

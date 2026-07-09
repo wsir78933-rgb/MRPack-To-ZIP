@@ -17,6 +17,8 @@ export type HeroCopy = {
   titleAccent: string;
   description: string;
   note: string;
+  chips: string[];
+  chipListAriaLabel: string;
 };
 
 export type ConverterModeCopy = {
@@ -36,8 +38,16 @@ export type ConversionWorkflowStageCopy = {
   'building-zip': string;
 };
 
+export type ConverterPreviewPanelCopy = {
+  title: string;
+  idleStatusLabel: string;
+  outputSlotLabel: string;
+  outputFileLabel: string;
+};
+
 export type ConverterPanelCopy = {
   fileTypeLabel: string;
+  previewPanel: ConverterPreviewPanelCopy;
   modes: Record<ConverterInputMode, ConverterModeCopy>;
   dropTitle: string;
   dropDescription: string;
@@ -80,6 +90,10 @@ export type StepsSectionCopy = {
   steps: StepCopy[];
 };
 
+export type ConversionStatesCopy = {
+  ariaLabel: string;
+};
+
 export type LauncherSupportLevel = 'yes' | 'partial' | 'no';
 
 export type LauncherSupportRowCopy = {
@@ -93,6 +107,7 @@ export type LauncherSupportRowCopy = {
 export type LauncherSupportCopy = {
   title: string;
   description: string;
+  tableAriaLabel: string;
   launcherHeader: string;
   mrpackHeader: string;
   zipHeader: string;
@@ -128,13 +143,14 @@ export type ConverterPageCopy = {
   localeCode: string;
   logoText: string;
   logoAccent: string;
-  glowToggleLabel: string;
+  languageSwitchLabel: string;
   navLinks: NavigationLinkCopy[];
   hero: HeroCopy;
   converterPanel: ConverterPanelCopy;
   mrpackInfo: InfoSectionCopy;
   howToConvert: StepsSectionCopy;
   converterLimits: InfoSectionCopy;
+  conversionStates: ConversionStatesCopy;
   launcherSupport: LauncherSupportCopy;
   faq: FaqCopy;
   footer: FooterCopy;
@@ -143,7 +159,7 @@ export type ConverterPageCopy = {
 export const englishConverterPageCopy: ConverterPageCopy = {
   ...sharedBrandCopy,
   localeCode: 'en',
-  glowToggleLabel: 'Toggle glow',
+  languageSwitchLabel: '中文',
   navLinks: [
     {
       label: 'Converter',
@@ -168,10 +184,22 @@ export const englishConverterPageCopy: ConverterPageCopy = {
     description:
       'Use this MRPack converter to turn Modrinth .mrpack files, project slugs, or download links into launcher-ready ZIP files in your browser.',
     note:
-      'Runs in your browser as a Modrinth pack to ZIP tool. Your local .mrpack file is not uploaded to a server; referenced files are fetched directly from their source URLs.'
+      'Runs in your browser as a Modrinth pack to ZIP tool. Your local .mrpack file is not uploaded to a server; referenced files are fetched directly from their source URLs.',
+    chips: [
+      'MRPack to ZIP',
+      'CurseForge ZIP to MRPack',
+      'Browser-first conversion'
+    ],
+    chipListAriaLabel: 'Supported conversion flows'
   },
   converterPanel: {
     fileTypeLabel: '.mrpack',
+    previewPanel: {
+      title: 'Crafting Converter',
+      idleStatusLabel: 'Idle',
+      outputSlotLabel: 'Output Slot',
+      outputFileLabel: 'ZIP archive'
+    },
     modes: {
       project: {
         title: 'Project ID',
@@ -270,10 +298,14 @@ export const englishConverterPageCopy: ConverterPageCopy = {
       'When some files cannot be fetched, the ZIP includes FAILED_DOWNLOADS.txt so you can see the original path, source URL, and reason that needs manual attention. This makes the MRPack to ZIP output easier to repair when a mod host blocks browser downloads.'
     ]
   },
+  conversionStates: {
+    ariaLabel: 'Conversion states'
+  },
   launcherSupport: {
     title: 'Which launchers need ZIP?',
     description:
       'Some launchers support .mrpack directly. Others work better with a standard ZIP archive, especially when you are importing manually or preparing files for a server panel.',
+    tableAriaLabel: 'Launcher support table',
     launcherHeader: 'Import target',
     mrpackHeader: 'MRPack path',
     zipHeader: 'ZIP path',
@@ -376,17 +408,33 @@ export const englishConverterPageCopy: ConverterPageCopy = {
       {
         label: 'FAQ',
         href: '#faq'
+      },
+      {
+        label: 'About',
+        href: '/about'
+      },
+      {
+        label: 'Privacy',
+        href: '/privacy'
+      },
+      {
+        label: 'Terms',
+        href: '/terms'
+      },
+      {
+        label: 'Contact',
+        href: '/contact'
       }
     ],
     copyright: '2026 MRPACKZIP. All rights reserved.',
-    disclaimer: 'Not affiliated with Modrinth, Mojang, or Microsoft.'
+    disclaimer: 'Not affiliated with Modrinth, CurseForge, Mojang, or Microsoft.'
   }
 };
 
 export const chineseConverterPageCopy: ConverterPageCopy = {
   ...sharedBrandCopy,
   localeCode: 'zh-Hans',
-  glowToggleLabel: '切换发光效果',
+  languageSwitchLabel: 'EN',
   navLinks: [
     {
       label: '转换器',
@@ -411,10 +459,22 @@ export const chineseConverterPageCopy: ConverterPageCopy = {
     description:
       '在浏览器中使用 MRPack 转 ZIP 工具，将 Modrinth .mrpack 文件、项目 ID 或下载链接转换成启动器可导入的 ZIP。',
     note:
-      '转换在浏览器中运行，可作为 Modrinth pack to ZIP 工具使用。本地 .mrpack 不会上传到服务器；引用文件会从原始下载 URL 直接获取。'
+      '转换在浏览器中运行，可作为 Modrinth pack to ZIP 工具使用。本地 .mrpack 不会上传到服务器；引用文件会从原始下载 URL 直接获取。',
+    chips: [
+      'MRPack 转 ZIP',
+      'CurseForge ZIP 转 MRPack',
+      '浏览器内转换'
+    ],
+    chipListAriaLabel: '支持的转换流程'
   },
   converterPanel: {
     fileTypeLabel: '.mrpack',
+    previewPanel: {
+      title: '转换工作台',
+      idleStatusLabel: '空闲',
+      outputSlotLabel: '输出槽',
+      outputFileLabel: 'ZIP 压缩包'
+    },
     modes: {
       project: {
         title: '项目 ID',
@@ -508,10 +568,14 @@ export const chineseConverterPageCopy: ConverterPageCopy = {
       '如果部分文件无法获取，生成的 ZIP 会包含 FAILED_DOWNLOADS.txt，方便你查看原始路径、来源 URL 和需要手动处理的原因。当某个模组源站阻止浏览器下载时，这能让生成结果更容易修复。'
     ]
   },
+  conversionStates: {
+    ariaLabel: '转换状态'
+  },
   launcherSupport: {
     title: '哪些启动器需要 ZIP？',
     description:
       '有些启动器能直接支持 .mrpack，有些启动器更适合使用标准 ZIP 压缩包，尤其是手动导入或准备服务器面板文件时。',
+    tableAriaLabel: '启动器兼容表',
     launcherHeader: '导入目标',
     mrpackHeader: 'MRPack 路径',
     zipHeader: 'ZIP 路径',
@@ -614,9 +678,25 @@ export const chineseConverterPageCopy: ConverterPageCopy = {
       {
         label: 'FAQ',
         href: '#faq'
+      },
+      {
+        label: '关于',
+        href: '/zh/about'
+      },
+      {
+        label: '隐私',
+        href: '/zh/privacy'
+      },
+      {
+        label: '条款',
+        href: '/zh/terms'
+      },
+      {
+        label: '联系',
+        href: '/zh/contact'
       }
     ],
     copyright: '2026 MRPACKZIP. 保留所有权利。',
-    disclaimer: '与 Modrinth、Mojang 或 Microsoft 无关联。'
+    disclaimer: '与 Modrinth、CurseForge、Mojang 或 Microsoft 无关联。'
   }
 };

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { POST } from "@/app/api/curseforge/download/route";
 import { downloadCurseForgeFileContent } from "@/lib/curseforge-api/client-download";
+import { conversionErrorCodes } from "@/lib/mrpack/errors";
 
 const originalCurseForgeApiKey = process.env.CURSEFORGE_API_KEY;
 
@@ -16,7 +17,7 @@ afterEach(() => {
 });
 
 describe("POST /api/curseforge/download", () => {
-  test("returns a clear error when the server API key is missing", async () => {
+  test("returns a structured error when the server API key is missing", async () => {
     delete process.env.CURSEFORGE_API_KEY;
 
     const response = await POST(
@@ -26,8 +27,12 @@ describe("POST /api/curseforge/download", () => {
       }),
     );
 
-    await expect(response.json()).resolves.toMatchObject({
-      error: expect.stringContaining("CURSEFORGE_API_KEY"),
+    await expect(response.json()).resolves.toEqual({
+      errorCode: "curseforge_api_error",
+      reason: "missing_api_key",
+      details: {
+        service: "curseforge",
+      },
     });
     expect(response.status).toBe(500);
   });
@@ -98,29 +103,44 @@ describe("POST /api/curseforge/download", () => {
       }),
     );
 
-    await expect(response.json()).resolves.toMatchObject({
-      error: expect.stringMatching(/projectId.*123.*999/),
+    await expect(response.json()).resolves.toEqual({
+      errorCode: "curseforge_api_error",
+      reason: "project_id_mismatch",
+      details: {
+        actualProjectId: 999,
+        expectedProjectId: 123,
+        fileId: 456,
+      },
     });
     expect(response.status).toBe(502);
   });
 
-  test("fails when CurseForge metadata marks the file unavailable", async () => {
+  test("downloads a CurseForge file when metadata marks it unavailable but exposes an allowed URL", async () => {
     process.env.CURSEFORGE_API_KEY = "server-secret-key";
-    const fetchMock = vi.fn(async () =>
-      Response.json({
-        data: [
-          {
-            modId: 123,
-            id: 456,
-            fileName: "unavailable.jar",
-            fileLength: 14,
-            downloadUrl: "https://edge.forgecdn.net/files/456/unavailable.jar",
-            hashes: [{ value: "sha1-a", algo: 1 }],
-            isAvailable: false,
-          },
-        ],
-      }),
-    );
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === "https://api.curseforge.com/v1/mods/files") {
+        expect(init?.headers).toMatchObject({ "x-api-key": "server-secret-key" });
+        return Response.json({
+          data: [
+            {
+              modId: 123,
+              id: 456,
+              fileName: "unavailable.jar",
+              fileLength: 14,
+              downloadUrl: "https://edge.forgecdn.net/files/456/unavailable.jar",
+              hashes: [{ value: "sha1-a", algo: 1 }],
+              isAvailable: false,
+            },
+          ],
+        });
+      }
+
+      expect(url).toBe("https://edge.forgecdn.net/files/456/unavailable.jar");
+      expect(init?.headers).toMatchObject({ "x-api-key": "server-secret-key" });
+      return new Response("unavailable jar bytes", {
+        headers: { "Content-Type": "application/java-archive" },
+      });
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await POST(
@@ -130,8 +150,47 @@ describe("POST /api/curseforge/download", () => {
       }),
     );
 
-    await expect(response.json()).resolves.toMatchObject({
-      error: expect.stringMatching(/isAvailable.*false.*123.*456/),
+    await expect(response.text()).resolves.toBe("unavailable jar bytes");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("application/java-archive");
+    expect(response.headers.get("X-CurseForge-File-Name")).toBe("unavailable.jar");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("fails before download when CurseForge metadata has no download URL", async () => {
+    process.env.CURSEFORGE_API_KEY = "server-secret-key";
+    const fetchMock = vi.fn(async (url: string) => {
+      expect(url).toBe("https://api.curseforge.com/v1/mods/files");
+      return Response.json({
+        data: [
+          {
+            modId: 123,
+            id: 456,
+            fileName: "missing-download-url.jar",
+            fileLength: 14,
+            downloadUrl: null,
+            hashes: [{ value: "sha1-a", algo: 1 }],
+            isAvailable: false,
+          },
+        ],
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(
+      new Request("https://example.com/api/curseforge/download", {
+        method: "POST",
+        body: JSON.stringify({ projectId: 123, fileId: 456 }),
+      }),
+    );
+
+    await expect(response.json()).resolves.toEqual({
+      errorCode: "curseforge_api_error",
+      reason: "download_url_missing",
+      details: {
+        fileId: 456,
+        projectId: 123,
+      },
     });
     expect(response.status).toBe(502);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -163,8 +222,54 @@ describe("POST /api/curseforge/download", () => {
       }),
     );
 
-    await expect(response.json()).resolves.toMatchObject({
-      error: expect.stringMatching(/https.*http:\/\/edge\.forgecdn\.net/),
+    await expect(response.json()).resolves.toEqual({
+      errorCode: "curseforge_api_error",
+      reason: "download_url_not_https",
+      details: {
+        actualProtocol: "http:",
+        downloadUrl: "http://edge.forgecdn.net/files/456/http-url.jar",
+        fileId: 456,
+        projectId: 123,
+      },
+    });
+    expect(response.status).toBe(502);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("fails with structured details when the CurseForge download URL is invalid", async () => {
+    process.env.CURSEFORGE_API_KEY = "server-secret-key";
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        data: [
+          {
+            modId: 123,
+            id: 456,
+            fileName: "invalid-url.jar",
+            fileLength: 14,
+            downloadUrl: "not a url",
+            hashes: [{ value: "sha1-a", algo: 1 }],
+            isAvailable: true,
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await POST(
+      new Request("https://example.com/api/curseforge/download", {
+        method: "POST",
+        body: JSON.stringify({ projectId: 123, fileId: 456 }),
+      }),
+    );
+
+    await expect(response.json()).resolves.toEqual({
+      errorCode: "curseforge_api_error",
+      reason: "download_url_invalid",
+      details: {
+        downloadUrl: "not a url",
+        fileId: 456,
+        projectId: 123,
+      },
     });
     expect(response.status).toBe(502);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -196,8 +301,15 @@ describe("POST /api/curseforge/download", () => {
       }),
     );
 
-    await expect(response.json()).resolves.toMatchObject({
-      error: expect.stringMatching(/example\.test.*edge\.forgecdn\.net/),
+    await expect(response.json()).resolves.toEqual({
+      errorCode: "curseforge_api_error",
+      reason: "download_url_not_allowed",
+      details: {
+        actualHost: "example.test",
+        expectedHost: "edge.forgecdn.net",
+        fileId: 456,
+        projectId: 123,
+      },
     });
     expect(response.status).toBe(502);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -236,10 +348,38 @@ describe("POST /api/curseforge/download", () => {
       }),
     );
 
-    await expect(response.json()).resolves.toMatchObject({
-      error: expect.stringMatching(/body null.*123.*456.*https:\/\/edge\.forgecdn\.net\/files\/456\/empty\.jar/),
+    await expect(response.json()).resolves.toEqual({
+      errorCode: "curseforge_api_error",
+      reason: "download_body_missing",
+      details: {
+        downloadUrl: "https://edge.forgecdn.net/files/456/empty.jar",
+        fileId: 456,
+        projectId: 123,
+      },
     });
     expect(response.status).toBe(502);
+  });
+
+  test("returns structured 400 details when a fileId value is invalid", async () => {
+    process.env.CURSEFORGE_API_KEY = "server-secret-key";
+
+    const response = await POST(
+      new Request("https://example.com/api/curseforge/download", {
+        method: "POST",
+        body: JSON.stringify({ projectId: 123, fileId: "bad-file-id" }),
+      }),
+    );
+
+    await expect(response.json()).resolves.toEqual({
+      errorCode: "curseforge_api_error",
+      reason: "invalid_request",
+      details: {
+        expectedDescription: "a positive integer no larger than 2147483647",
+        fieldPath: "fileReference.fileId",
+        problemValue: "bad-file-id",
+      },
+    });
+    expect(response.status).toBe(400);
   });
 });
 
@@ -258,5 +398,90 @@ describe("downloadCurseForgeFileContent", () => {
     );
 
     await expect(fileContent.text()).resolves.toBe("curse jar bytes");
+  });
+
+  test("throws a structured ConversionError for local route errors", async () => {
+    const fetchLike = async () =>
+      Response.json(
+        {
+          errorCode: "curseforge_api_error",
+          reason: "download_url_not_allowed",
+          details: {
+            actualHost: "example.test",
+            expectedHost: "edge.forgecdn.net",
+            fileId: 456,
+            projectId: 123,
+          },
+        },
+        { status: 502, statusText: "Bad Gateway" },
+      );
+
+    await expect(
+      downloadCurseForgeFileContent({ projectId: 123, fileId: 456 }, fetchLike),
+    ).rejects.toMatchObject({
+      code: conversionErrorCodes.downloadFailed,
+      context: {
+        reason: "curseforge_route_error",
+        route: "/api/curseforge/download",
+        routeReason: "download_url_not_allowed",
+        status: 502,
+      },
+      details: {
+        actualHost: "example.test",
+        expectedHost: "edge.forgecdn.net",
+        fileId: 456,
+        projectId: 123,
+      },
+    });
+  });
+
+  test("wraps legacy local route JSON errors in a structured ConversionError", async () => {
+    const fetchLike = async () =>
+      Response.json(
+        {
+          error: "Legacy CurseForge download failure.",
+        },
+        { status: 502, statusText: "Bad Gateway" },
+      );
+
+    await expect(
+      downloadCurseForgeFileContent({ projectId: 123, fileId: 456 }, fetchLike),
+    ).rejects.toMatchObject({
+      code: conversionErrorCodes.downloadFailed,
+      context: {
+        reason: "curseforge_route_error",
+        route: "/api/curseforge/download",
+        routeReason: "legacy_route_error",
+        status: 502,
+      },
+      details: {
+        error: "Legacy CurseForge download failure.",
+      },
+    });
+  });
+
+  test("includes status and statusText when local route error JSON cannot be parsed", async () => {
+    const fetchLike = async () =>
+      new Response("not json", {
+        status: 502,
+        statusText: "Bad Gateway",
+      });
+
+    await expect(
+      downloadCurseForgeFileContent({ projectId: 123, fileId: 456 }, fetchLike),
+    ).rejects.toMatchObject({
+      code: conversionErrorCodes.downloadFailed,
+      message: expect.stringMatching(/502 Bad Gateway/),
+      context: {
+        reason: "curseforge_route_error",
+        route: "/api/curseforge/download",
+        routeReason: "unparseable_route_error",
+        status: 502,
+      },
+      details: {
+        status: 502,
+        statusText: "Bad Gateway",
+      },
+    });
   });
 });

@@ -13,9 +13,15 @@ export type MatchedModrinthFile = {
 
 export type ModrinthIndexFile = {
   path: string;
+  env: ModrinthIndexFileEnvironment;
   downloads: string[];
   hashes: Record<string, string>;
   fileSize?: number;
+};
+
+export type ModrinthIndexFileEnvironment = {
+  client: "required";
+  server: "required";
 };
 
 export type ModrinthIndex = {
@@ -48,6 +54,10 @@ const loaderDependencyPatterns = [
 
 const fallbackPackName = "Converted Pack";
 const fallbackVersionId = "1.0.0";
+const defaultModrinthFileEnvironment = {
+  client: "required",
+  server: "required",
+} satisfies ModrinthIndexFileEnvironment;
 
 export function createModrinthIndex({
   curseForgeManifest,
@@ -103,6 +113,7 @@ function parseMatchedModrinthFile(matchedModrinthFile: MatchedModrinthFile): Mod
     path,
     downloads,
     hashes,
+    env: defaultModrinthFileEnvironment,
     ...(fileSize === undefined ? {} : { fileSize }),
   };
 }

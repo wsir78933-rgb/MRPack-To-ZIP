@@ -40,6 +40,34 @@ const chineseConversionErrorCopy: ConversionErrorCopy = {
   unknownErrorLabel: "未知转换错误"
 };
 
+const englishGenericConversionErrorDetails: Record<ConversionErrorCode, string> = {
+  [conversionErrorCodes.invalidInput]: "The conversion input is invalid.",
+  [conversionErrorCodes.invalidPath]: "The archive contains an invalid path.",
+  [conversionErrorCodes.invalidUrl]: "The conversion contains an invalid URL.",
+  [conversionErrorCodes.invalidMrpack]:
+    "The MRPack archive is invalid. Please upload a complete .mrpack file.",
+  [conversionErrorCodes.modrinthApiError]:
+    "Modrinth returned an invalid response. Please try again later.",
+  [conversionErrorCodes.downloadFailed]:
+    "The download failed. Please try again later.",
+  [conversionErrorCodes.zipBuildFailed]:
+    "The ZIP file could not be generated. Please try again."
+};
+
+const chineseGenericConversionErrorDetails: Record<ConversionErrorCode, string> = {
+  [conversionErrorCodes.invalidInput]: "转换输入无效，请检查上传文件或项目标识。",
+  [conversionErrorCodes.invalidPath]: "压缩包内包含无效路径，请检查文件结构。",
+  [conversionErrorCodes.invalidUrl]: "转换任务包含无效 URL，请检查来源链接。",
+  [conversionErrorCodes.invalidMrpack]:
+    "MRPack 文件结构无效，请确认上传的是完整的 .mrpack 文件。",
+  [conversionErrorCodes.modrinthApiError]:
+    "Modrinth 返回数据无效，请稍后再试。",
+  [conversionErrorCodes.downloadFailed]:
+    "下载过程中出现问题，请稍后再试。",
+  [conversionErrorCodes.zipBuildFailed]:
+    "ZIP 文件生成失败，请稍后再试。"
+};
+
 export function formatConversionErrorForLocale(
   caughtError: unknown,
   localeCode: string
@@ -97,7 +125,7 @@ function formatConversionErrorDetail(
     return formatInvalidInputDetail(conversionError, localeCode);
   }
 
-  return conversionError.message;
+  return formatGenericConversionErrorDetail(conversionError.code, localeCode);
 }
 
 function formatInvalidPathDetail(
@@ -108,7 +136,7 @@ function formatInvalidPathDetail(
   const reason = readStringProperty(conversionError.context, "reason");
 
   if (archivePath === null || !reason) {
-    return conversionError.message;
+    return formatGenericConversionErrorDetail(conversionError.code, localeCode);
   }
 
   const pathReason = formatPathReason(reason, localeCode);
@@ -156,22 +184,26 @@ function formatInvalidUrlDetail(
   const valueName = readStringProperty(conversionError.context, "valueName");
 
   if (!reason || !urlText || !valueName) {
-    return conversionError.message;
+    return formatGenericConversionErrorDetail(conversionError.code, localeCode);
   }
 
   if (reason === "non_http_protocol") {
+    const localizedValueName = formatValueName(valueName, localeCode);
+
     if (localeCode === chineseLocaleCode) {
-      return `${valueName} 的协议无效：${protocol ?? "unknown"}。只支持 http 或 https URL。`;
+      return `${localizedValueName}的协议无效：${protocol ?? "unknown"}。只支持 http 或 https URL。`;
     }
 
-    return `${valueName} has invalid protocol ${protocol ?? "unknown"}. Expected an http or https URL.`;
+    return `${localizedValueName} has invalid protocol ${protocol ?? "unknown"}. Expected an http or https URL.`;
   }
+
+  const localizedValueName = formatValueName(valueName, localeCode);
 
   if (localeCode === chineseLocaleCode) {
-    return `${valueName} 的 URL 无效：${urlText}。`;
+    return `${localizedValueName}的 URL 无效：${urlText}。`;
   }
 
-  return `${valueName} is not a valid URL: ${urlText}.`;
+  return `${localizedValueName} is not a valid URL: ${urlText}.`;
 }
 
 function formatModrinthApiDetail(
@@ -188,7 +220,7 @@ function formatModrinthApiDetail(
   const problemValue = detailsRecord?.problemValue;
 
   if (!expectedDescription || !fieldPath || !project) {
-    return conversionError.message;
+    return formatGenericConversionErrorDetail(conversionError.code, localeCode);
   }
 
   const localizedExpectedDescription = formatExpectedDescription(
@@ -227,6 +259,11 @@ function formatDownloadFailureDetail(
   conversionError: ConversionError,
   localeCode: string
 ) {
+  const reason = readStringProperty(conversionError.context, "reason");
+  if (reason === "curseforge_route_error") {
+    return formatCurseForgeRouteErrorDetail(conversionError, localeCode);
+  }
+
   const contentLengthBytes = readNumberProperty(
     conversionError.context,
     "contentLengthBytes"
@@ -244,7 +281,7 @@ function formatDownloadFailureDetail(
   );
 
   if (!limitDescription || maxBodyBytes === null || !sourceLabel) {
-    return conversionError.message;
+    return formatGenericConversionErrorDetail(conversionError.code, localeCode);
   }
 
   const localizedLimitDescription = formatLimitDescription(
@@ -268,7 +305,31 @@ function formatDownloadFailureDetail(
     return `${sourceLabel} Content-Length is ${contentLengthBytes} bytes, exceeding the ${maxBodyBytes} byte limit (${localizedLimitDescription}).`;
   }
 
-  return conversionError.message;
+  return formatGenericConversionErrorDetail(conversionError.code, localeCode);
+}
+
+function formatCurseForgeRouteErrorDetail(
+  conversionError: ConversionError,
+  localeCode: string
+) {
+  const routeReason = readStringProperty(conversionError.context, "routeReason");
+  if (routeReason === "missing_api_key") {
+    if (localeCode === chineseLocaleCode) {
+      return "CurseForge 下载服务暂时不可用，请稍后再试。";
+    }
+
+    return "CurseForge download service is temporarily unavailable. Please try again later.";
+  }
+
+  if (routeReason === "invalid_route_response") {
+    if (localeCode === chineseLocaleCode) {
+      return "CurseForge 下载服务返回的数据无效，请稍后再试。";
+    }
+
+    return "CurseForge download service returned invalid data. Please try again later.";
+  }
+
+  return formatGenericConversionErrorDetail(conversionError.code, localeCode);
 }
 
 function formatLimitDescription(
@@ -315,7 +376,7 @@ function formatInvalidInputDetail(
   const inputMode = readStringProperty(conversionError.context, "inputMode");
 
   if (!inputMode) {
-    return conversionError.message;
+    return formatGenericConversionErrorDetail(conversionError.code, localeCode);
   }
 
   if (localeCode === chineseLocaleCode) {
@@ -334,7 +395,7 @@ function formatMrpackSourceSizeDetail(
   const sourceLabel = readStringProperty(conversionError.context, "sourceLabel");
 
   if (byteLength === null || maxBytes === null || !sourceLabel) {
-    return conversionError.message;
+    return formatGenericConversionErrorDetail(conversionError.code, localeCode);
   }
 
   if (localeCode === chineseLocaleCode) {
@@ -351,7 +412,7 @@ function formatNoMrpackFileDetail(
   const projectIdOrSlug = readStringProperty(conversionError.context, "projectIdOrSlug");
 
   if (!projectIdOrSlug) {
-    return conversionError.message;
+    return formatGenericConversionErrorDetail(conversionError.code, localeCode);
   }
 
   if (localeCode === chineseLocaleCode) {
@@ -359,6 +420,30 @@ function formatNoMrpackFileDetail(
   }
 
   return `Modrinth project ${projectIdOrSlug} does not contain a convertible .mrpack file.`;
+}
+
+function formatValueName(valueName: string, localeCode: string) {
+  if (localeCode !== chineseLocaleCode) {
+    return valueName;
+  }
+
+  if (valueName.startsWith("MRPack download URL")) {
+    return "MRPack 下载链接";
+  }
+
+  return valueName;
+}
+
+function formatGenericConversionErrorDetail(
+  conversionErrorCode: ConversionErrorCode,
+  localeCode: string
+) {
+  const genericConversionErrorDetails =
+    localeCode === chineseLocaleCode
+      ? chineseGenericConversionErrorDetails
+      : englishGenericConversionErrorDetails;
+
+  return genericConversionErrorDetails[conversionErrorCode];
 }
 
 function getFallbackErrorMessage(caughtError: unknown) {

@@ -1,4 +1,5 @@
 import type { ConverterPageCopy } from "@/lib/i18n/converter-page-copy";
+import { getSiteMetadataCopy } from "@/lib/i18n/site-metadata-copy";
 import type { ZipToMrpackPageCopy } from "@/lib/i18n/zip-to-mrpack-page-copy";
 import {
   buildAbsoluteUrl,
@@ -24,6 +25,8 @@ export type PageStructuredData = {
   "@graph": JsonLdGraphEntry[];
 };
 
+const siteName = "MRPack to ZIP";
+
 export function buildConverterStructuredData({
   copy,
   routePath,
@@ -46,11 +49,10 @@ export function buildZipToMrpackStructuredData({
   routePath,
   siteUrl = resolveProductionSiteUrl(),
 }: StructuredDataInput<ZipToMrpackPageCopy>): PageStructuredData {
+  const routeMetadataCopy = getSiteMetadataCopy(routePath);
+
   return buildPageStructuredData({
-    applicationName:
-      copy.localeCode === "zh-Hans"
-        ? "ZIP 转 MRPack 转换器"
-        : "ZIP to MRPack Converter",
+    applicationName: routeMetadataCopy.title,
     description: copy.hero.description,
     faqItems: copy.faq.items,
     routePath,
@@ -76,6 +78,9 @@ function buildPageStructuredData({
   return {
     "@context": "https://schema.org",
     "@graph": [
+      buildOrganizationData(siteUrl),
+      buildWebSiteData(siteUrl),
+      buildBreadcrumbListData({ routePath, siteUrl }),
       {
         "@type": "WebApplication",
         name: applicationName,
@@ -97,4 +102,78 @@ function buildPageStructuredData({
       },
     ],
   };
+}
+
+function buildOrganizationData(siteUrl: URL): JsonLdGraphEntry {
+  return {
+    "@type": "Organization",
+    "@id": buildSiteFragmentUrl("organization", siteUrl),
+    name: siteName,
+    url: buildAbsoluteUrl("/", siteUrl),
+  };
+}
+
+function buildWebSiteData(siteUrl: URL): JsonLdGraphEntry {
+  return {
+    "@type": "WebSite",
+    "@id": buildSiteFragmentUrl("website", siteUrl),
+    name: siteName,
+    url: buildAbsoluteUrl("/", siteUrl),
+    inLanguage: ["en", "zh-Hans"],
+    publisher: {
+      "@id": buildSiteFragmentUrl("organization", siteUrl),
+    },
+  };
+}
+
+function buildBreadcrumbListData({
+  routePath,
+  siteUrl,
+}: {
+  routePath: SiteRoutePath;
+  siteUrl: URL;
+}): JsonLdGraphEntry {
+  const itemListElement = [
+    buildBreadcrumbItem({
+      position: 1,
+      name: siteName,
+      item: buildAbsoluteUrl("/", siteUrl),
+    }),
+  ];
+
+  if (routePath !== "/") {
+    itemListElement.push(
+      buildBreadcrumbItem({
+        position: 2,
+        name: getSiteMetadataCopy(routePath).title,
+        item: buildAbsoluteUrl(routePath, siteUrl),
+      }),
+    );
+  }
+
+  return {
+    "@type": "BreadcrumbList",
+    itemListElement,
+  };
+}
+
+function buildBreadcrumbItem({
+  position,
+  name,
+  item,
+}: {
+  position: number;
+  name: string;
+  item: string;
+}): JsonLdGraphEntry {
+  return {
+    "@type": "ListItem",
+    position,
+    name,
+    item,
+  };
+}
+
+function buildSiteFragmentUrl(fragmentId: string, siteUrl: URL): string {
+  return new URL(`/#${fragmentId}`, siteUrl).toString();
 }

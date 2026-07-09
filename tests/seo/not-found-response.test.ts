@@ -4,35 +4,30 @@ import {
   buildNotFoundHtml,
   buildNotFoundResponse,
 } from "@/lib/seo/not-found-response";
+import {
+  chineseNotFoundPageCopy,
+  englishNotFoundPageCopy,
+} from "@/lib/i18n/not-found-page-copy";
 
 describe("not found response", () => {
   test("builds localized 404 HTML with static language and noindex", () => {
-    const notFoundHtml = buildNotFoundHtml({
-      htmlLang: "zh-Hans",
-      title: "页面未找到",
-      message: "你访问的页面可能已被移除、重命名，或暂时不可用。",
-      homeHref: "/zh",
-      homeLabel: "返回首页",
-    });
+    const notFoundHtml = buildNotFoundHtml(chineseNotFoundPageCopy);
 
-    expect(notFoundHtml).toContain('<html lang="zh-Hans">');
+    expect(notFoundHtml).toContain(
+      `<html lang="${chineseNotFoundPageCopy.htmlLang}">`,
+    );
     expect(notFoundHtml).toContain(
       '<meta name="robots" content="noindex">',
     );
-    expect(notFoundHtml).toContain("<title>页面未找到</title>");
-    expect(notFoundHtml).toContain('href="/zh"');
-    expect(notFoundHtml).toContain("返回首页");
+    expect(notFoundHtml).toContain(
+      `<title>${chineseNotFoundPageCopy.title}</title>`,
+    );
+    expect(notFoundHtml).toContain(`href="${chineseNotFoundPageCopy.homeHref}"`);
+    expect(notFoundHtml).toContain(chineseNotFoundPageCopy.homeLabel);
   });
 
   test("returns an HTML response with 404 status", () => {
-    const notFoundResponse = buildNotFoundResponse({
-      htmlLang: "en",
-      title: "Page Not Found",
-      message:
-        "The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.",
-      homeHref: "/",
-      homeLabel: "Back to Home",
-    });
+    const notFoundResponse = buildNotFoundResponse(englishNotFoundPageCopy);
 
     expect(notFoundResponse.status).toBe(404);
     expect(notFoundResponse.headers.get("content-type")).toBe(

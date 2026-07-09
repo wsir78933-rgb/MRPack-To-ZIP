@@ -1,10 +1,13 @@
 import '../globals.css';
 import type { Metadata } from 'next';
 
+import { buildPageMetadata } from '@/lib/seo/site-metadata';
+
+const chineseHomePageMetadata = buildPageMetadata('/zh');
+
 export const metadata: Metadata = {
-  title: 'MRPack 转 ZIP 在线转换器 - Minecraft 模组包工具',
-  description:
-    '在浏览器中使用 MRPack 转 ZIP 工具，将 Modrinth .mrpack 文件、项目 ID 或下载链接转换成启动器可导入的 ZIP。',
+  title: chineseHomePageMetadata.title,
+  description: chineseHomePageMetadata.description,
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
     shortcut: [{ url: '/icon.svg', type: 'image/svg+xml' }],
