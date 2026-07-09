@@ -4,6 +4,7 @@ import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
 import { GET as getEnglishNotFoundResponse } from "@/app/(en)/[...notFoundSegments]/route";
 import { GET as getChineseNotFoundResponse } from "@/app/(zh)/zh/[...notFoundSegments]/route";
+import { siteContentLastModified } from "@/lib/seo/site-metadata";
 
 describe("app SEO routes", () => {
   test("returns robots metadata that allows pages, disallows API routes, and links the sitemap", () => {
@@ -19,10 +20,51 @@ describe("app SEO routes", () => {
 
   test("returns sitemap entries for canonical pages only", () => {
     expect(sitemap()).toEqual([
-      { url: "https://mrpacktozip.pro/" },
-      { url: "https://mrpacktozip.pro/zh" },
-      { url: "https://mrpacktozip.pro/zip-to-mrpack" },
-      { url: "https://mrpacktozip.pro/zh/zip-to-mrpack" },
+      { url: "https://mrpacktozip.pro/", lastModified: siteContentLastModified },
+      {
+        url: "https://mrpacktozip.pro/zh",
+        lastModified: siteContentLastModified,
+      },
+      {
+        url: "https://mrpacktozip.pro/zip-to-mrpack",
+        lastModified: siteContentLastModified,
+      },
+      {
+        url: "https://mrpacktozip.pro/zh/zip-to-mrpack",
+        lastModified: siteContentLastModified,
+      },
+      {
+        url: "https://mrpacktozip.pro/about",
+        lastModified: siteContentLastModified,
+      },
+      {
+        url: "https://mrpacktozip.pro/zh/about",
+        lastModified: siteContentLastModified,
+      },
+      {
+        url: "https://mrpacktozip.pro/privacy",
+        lastModified: siteContentLastModified,
+      },
+      {
+        url: "https://mrpacktozip.pro/zh/privacy",
+        lastModified: siteContentLastModified,
+      },
+      {
+        url: "https://mrpacktozip.pro/terms",
+        lastModified: siteContentLastModified,
+      },
+      {
+        url: "https://mrpacktozip.pro/zh/terms",
+        lastModified: siteContentLastModified,
+      },
+      {
+        url: "https://mrpacktozip.pro/contact",
+        lastModified: siteContentLastModified,
+      },
+      {
+        url: "https://mrpacktozip.pro/zh/contact",
+        lastModified: siteContentLastModified,
+      },
     ]);
   });
 

@@ -11,7 +11,9 @@ describe("zip to mrpack routes", () => {
     const pageModule = await import("@/app/(en)/zip-to-mrpack/page");
     const pageElement = pageModule.default();
 
-    expect(pageModule.metadata.title).toBe("ZIP to MRPack Converter");
+    expect(pageModule.metadata.title).toBe(
+      "CurseForge ZIP to MRPack Converter - Free Online Tool",
+    );
     expect(pageElement.type.name).toBe("LocalizedZipToMrpackPage");
   });
 
@@ -19,7 +21,9 @@ describe("zip to mrpack routes", () => {
     const pageModule = await import("@/app/(zh)/zh/zip-to-mrpack/page");
     const pageElement = pageModule.default();
 
-    expect(pageModule.metadata.title).toBe("ZIP 转 MRPack 转换器");
+    expect(pageModule.metadata.title).toBe(
+      "CurseForge ZIP 转 MRPack 转换器 - 免费在线工具",
+    );
     expect(pageElement.type.name).toBe("LocalizedZipToMrpackPage");
   });
 });

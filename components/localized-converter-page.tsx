@@ -9,23 +9,17 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
-  Box,
   CheckCircle2,
   CircleAlert,
   ExternalLink,
   FileArchive,
   FileSearch,
   FileText,
-  Github,
   HelpCircle,
-  Layers3,
-  LockKeyhole,
   Loader2,
-  Moon,
   PackageOpen,
   RotateCcw,
   ShieldCheck,
-  Sun,
   Upload,
   Workflow
 } from "lucide-react";
@@ -38,6 +32,22 @@ import {
   AccordionTrigger
 } from "@/components/ui/accordion";
 import { ConversionProgressPanel } from "@/components/conversion-progress-panel";
+import {
+  MinecraftWorkbenchContentSection,
+  MinecraftWorkbenchFooter,
+  MinecraftWorkbenchHeroCopy,
+  MinecraftWorkbenchHeroShell,
+  MinecraftWorkbenchPage,
+  MinecraftWorkbenchSectionHeading,
+  MinecraftWorkbenchSummaryValue,
+  MinecraftWorkbenchTopNavigation,
+  workbenchInfoPanelClass,
+  workbenchInnerSlotClass,
+  workbenchMiniPanelClass,
+  workbenchPanelClass,
+  workbenchPrimaryButtonClass,
+  workbenchSecondaryButtonClass
+} from "@/components/minecraft-workbench-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -162,7 +172,6 @@ export function LocalizedConverterPage({ copy }: LocalizedConverterPageProps) {
   const [conversionRunState, setConversionRunState] =
     useState<ConversionRunState>({ status: "idle" });
   const [expandedFaqQuestions, setExpandedFaqQuestions] = useState<string[]>([]);
-  const [isGlowEnabled, setIsGlowEnabled] = useState(false);
   const activeConversionRunIdRef = useRef(0);
 
   const selectedFileName = selectedFile?.name ?? null;
@@ -255,7 +264,7 @@ export function LocalizedConverterPage({ copy }: LocalizedConverterPageProps) {
     }
   }
 
-  function handleFileDrop(event: DragEvent<HTMLDivElement>) {
+  function handleFileDrop(event: DragEvent<HTMLElement>) {
     event.preventDefault();
     const droppedFile = event.dataTransfer.files.item(0);
     const validDroppedFile = applySelectedUploadFile(droppedFile);
@@ -344,62 +353,53 @@ export function LocalizedConverterPage({ copy }: LocalizedConverterPageProps) {
   }
 
   return (
-    <main
-      lang={copy.localeCode}
-      className={cn(
-        "relative min-h-[100dvh] overflow-x-hidden bg-[#03070b] text-white",
-        isGlowEnabled && "selection:bg-lime-300 selection:text-black"
-      )}
-    >
+    <MinecraftWorkbenchPage lang={copy.localeCode}>
       <StructuredDataScript structuredData={structuredData} />
-      <PageBackground isGlowEnabled={isGlowEnabled} />
-
       <div className="relative z-10">
-        <TopNavigation
-          copy={copy}
-          isGlowEnabled={isGlowEnabled}
-          onGlowToggle={() =>
-            setIsGlowEnabled((currentGlowValue) => !currentGlowValue)
-          }
-        />
+        <TopNavigation copy={copy} />
 
-        <div className="mx-auto w-full max-w-[1120px] px-4 pb-14 pt-9 sm:px-6 sm:pt-10 lg:px-8 lg:pt-12">
+        <MinecraftWorkbenchHeroShell
+          converter={
+            <ConverterPanel
+              copy={copy}
+              activeInputMode={activeInputMode}
+              conversionRunState={conversionRunState}
+              inputId={uploadInputId}
+              invalidFileName={invalidFileName}
+              mrpackDownloadUrl={mrpackDownloadUrl}
+              projectIdOrSlug={projectIdOrSlug}
+              selectedFileName={selectedFileName}
+              onActiveInputModeChange={updateActiveInputMode}
+              onFileDrop={handleFileDrop}
+              onFileInputChange={handleFileInputChange}
+              onMrpackDownloadUrlChange={updateMrpackDownloadUrl}
+              onProjectIdOrSlugChange={updateProjectIdOrSlug}
+              onResetConversion={clearConversionResult}
+              onStartConversion={startConversion}
+            />
+          }
+        >
           <Hero copy={copy} />
-          <ConverterPanel
-            copy={copy}
-            activeInputMode={activeInputMode}
-            conversionRunState={conversionRunState}
-            inputId={uploadInputId}
-            invalidFileName={invalidFileName}
-            mrpackDownloadUrl={mrpackDownloadUrl}
-            projectIdOrSlug={projectIdOrSlug}
-            selectedFileName={selectedFileName}
-            onActiveInputModeChange={updateActiveInputMode}
-            onFileDrop={handleFileDrop}
-            onFileInputChange={handleFileInputChange}
-            onMrpackDownloadUrlChange={updateMrpackDownloadUrl}
-            onProjectIdOrSlugChange={updateProjectIdOrSlug}
-            onResetConversion={clearConversionResult}
-            onStartConversion={startConversion}
-          />
-          <InfoSection info={copy.mrpackInfo} />
-          <HowToConvertSection sectionCopy={copy.howToConvert} />
-          <ConverterLimitsSection info={copy.converterLimits} />
-          <LauncherSupportSection launcherSupport={copy.launcherSupport} />
-          <FaqSection
-            expandedQuestions={expandedFaqQuestions}
-            closeAllLabel={copy.faq.closeAllLabel}
-            faqItems={copy.faq.items}
-            title={copy.faq.title}
-            viewAllLabel={copy.faq.viewAllLabel}
-            onToggleAllQuestions={toggleAllFaqQuestions}
-            onExpandedQuestionsChange={setExpandedFaqQuestions}
-          />
-        </div>
+        </MinecraftWorkbenchHeroShell>
+
+        <ConversionStatesSection copy={copy} />
+        <InfoSection info={copy.mrpackInfo} />
+        <HowToConvertSection sectionCopy={copy.howToConvert} />
+        <ConverterLimitsSection info={copy.converterLimits} />
+        <LauncherSupportSection launcherSupport={copy.launcherSupport} />
+        <FaqSection
+          expandedQuestions={expandedFaqQuestions}
+          closeAllLabel={copy.faq.closeAllLabel}
+          faqItems={copy.faq.items}
+          title={copy.faq.title}
+          viewAllLabel={copy.faq.viewAllLabel}
+          onToggleAllQuestions={toggleAllFaqQuestions}
+          onExpandedQuestionsChange={setExpandedFaqQuestions}
+        />
 
         <PageFooter copy={copy} />
       </div>
-    </main>
+    </MinecraftWorkbenchPage>
   );
 }
 
@@ -420,132 +420,40 @@ function StructuredDataScript({
   );
 }
 
-function PageBackground({ isGlowEnabled }: { isGlowEnabled: boolean }) {
-  return (
-    <>
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 scale-[1.02] bg-[url('/assets/mrpackzip-voxel-bg.png')] bg-cover bg-center opacity-[0.72] saturate-[1.12] contrast-[1.08]"
-      />
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 bg-[linear-gradient(180deg,rgba(2,6,10,0.82)_0%,rgba(2,7,10,0.55)_38%,rgba(2,5,8,0.86)_100%)]"
-      />
-      <div
-        aria-hidden="true"
-        className={cn(
-          "fixed inset-0 transition-opacity duration-500",
-          "bg-[radial-gradient(circle_at_14%_42%,rgba(76,255,54,0.14),transparent_18%),radial-gradient(circle_at_86%_40%,rgba(92,255,58,0.13),transparent_18%),linear-gradient(90deg,rgba(78,255,61,0.055),transparent_24%,transparent_76%,rgba(78,255,61,0.055))]",
-          isGlowEnabled ? "opacity-100" : "opacity-80"
-        )}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.028)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.022)_1px,transparent_1px)] bg-[size:76px_76px] opacity-[0.12]"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 h-32 bg-gradient-to-b from-black/55 to-transparent"
-      />
-    </>
-  );
-}
-
 function TopNavigation({
-  copy,
-  isGlowEnabled,
-  onGlowToggle
+  copy
 }: {
   copy: ConverterPageCopy;
-  isGlowEnabled: boolean;
-  onGlowToggle: () => void;
 }) {
   const logoHref = copy.localeCode === "zh-Hans" ? "/zh" : "/";
   const languageHref = copy.localeCode === "zh-Hans" ? "/" : "/zh";
-  const languageLabel = copy.localeCode === "zh-Hans" ? "EN" : "中文";
 
   return (
-    <header className="sticky top-0 z-20 border-b border-white/[0.08] bg-[#03070b]/82 backdrop-blur-xl">
-      <div className="mx-auto flex h-[62px] w-full max-w-[1120px] items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
-        <Link
-          aria-label={`${copy.logoText}${copy.logoAccent}`}
-          className="flex min-w-max items-center gap-2"
-          href={logoHref}
-        >
-          <Box className="size-6 text-lime-400 drop-shadow-[0_0_16px_rgba(116,255,70,0.5)] sm:size-7" />
-          <span className="text-lg font-black tracking-[-0.03em] text-white sm:text-xl">
-            {copy.logoText}
-            <span className="text-lime-400">{copy.logoAccent}</span>
-          </span>
-        </Link>
-
-        <nav className="hidden h-full items-center gap-6 text-sm font-medium text-slate-100 md:flex lg:gap-8">
-          {copy.navLinks.map((navigationLink) => (
-            <Link
-              aria-current={navigationLink.isActive ? "page" : undefined}
-              className={cn(
-                "relative flex h-full items-center whitespace-nowrap transition-colors hover:text-lime-300",
-                navigationLink.isActive && "text-lime-300"
-              )}
-              href={navigationLink.href}
-              key={navigationLink.label}
-            >
-              {navigationLink.label}
-              {navigationLink.isActive ? (
-                <span className="absolute inset-x-[-12px] bottom-0 h-[2px] rounded-full bg-lime-400 shadow-[0_0_18px_rgba(116,255,70,0.95)]" />
-              ) : null}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <Link
-            className="grid h-9 min-w-9 place-items-center rounded-lg border border-white/15 bg-white/[0.035] px-2 text-xs font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-lime-300/55 hover:text-lime-300 sm:h-10 sm:min-w-10 sm:text-sm"
-            href={languageHref}
-          >
-            {languageLabel}
-          </Link>
-          <Button
-            aria-pressed={isGlowEnabled}
-            aria-label={copy.glowToggleLabel}
-            className={cn(
-              "size-9 rounded-lg border bg-white/[0.035] p-0 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-lime-300/55 hover:bg-white/[0.055] hover:text-lime-300 sm:size-10",
-              isGlowEnabled ? "border-lime-300/70 text-lime-300" : "border-white/15"
-            )}
-            type="button"
-            variant="ghost"
-            onClick={onGlowToggle}
-          >
-            {isGlowEnabled ? <Moon className="size-5" /> : <Sun className="size-5" />}
-          </Button>
-        </div>
-      </div>
-    </header>
+    <MinecraftWorkbenchTopNavigation
+      languageHref={languageHref}
+      languageLabel={copy.languageSwitchLabel}
+      logoAccent={copy.logoAccent}
+      logoHref={logoHref}
+      logoText={copy.logoText}
+      navLinks={copy.navLinks}
+    />
   );
 }
 
 function Hero({ copy }: { copy: ConverterPageCopy }) {
   return (
-    <section className="mx-auto max-w-[860px] text-center">
-      <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-lime-300/25 bg-lime-300/10 px-4 py-2 text-[12px] font-extrabold uppercase tracking-[0.12em] text-lime-300 shadow-[0_0_26px_rgba(116,255,70,0.13)]">
-        <PackageOpen className="size-3.5 shrink-0" />
-        <span className="truncate">{copy.hero.badge}</span>
-      </div>
-
-      <h1 className="mx-auto mt-4 max-w-[760px] text-5xl font-black leading-[0.95] tracking-[-0.035em] text-white drop-shadow-[0_12px_34px_rgba(0,0,0,0.52)] sm:text-6xl sm:tracking-[-0.045em] lg:text-8xl">
+    <MinecraftWorkbenchHeroCopy
+      badge={copy.hero.badge}
+      chipListAriaLabel={copy.hero.chipListAriaLabel}
+      chips={copy.hero.chips}
+      description={copy.hero.description}
+      note={copy.hero.note}
+    >
+      <h1 className="mt-5 max-w-[10ch] text-[clamp(50px,6.6vw,86px)] font-black leading-[0.88] tracking-[-0.075em] text-[#f4f7ef] drop-shadow-[0_5px_0_rgba(0,0,0,0.34)]">
         <HeroTitleStart titleStart={copy.hero.titleStart} />
-        <span className="block text-lime-400 drop-shadow-[0_0_30px_rgba(116,255,70,0.3)]">
-          {copy.hero.titleAccent}
-        </span>
+        <span className="block text-[#b7f276]">{copy.hero.titleAccent}</span>
       </h1>
-
-      <p className="mx-auto mt-5 max-w-[680px] text-base font-medium leading-7 text-slate-100 sm:text-lg">
-        {copy.hero.description}
-      </p>
-      <p className="mx-auto mt-2 max-w-[620px] text-sm leading-6 text-lime-100/78">
-        {copy.hero.note}
-      </p>
-    </section>
+    </MinecraftWorkbenchHeroCopy>
   );
 }
 
@@ -590,7 +498,7 @@ function ConverterPanel({
   invalidFileName: string | null;
   mrpackDownloadUrl: string;
   onActiveInputModeChange: (inputMode: ConverterInputMode) => void;
-  onFileDrop: (event: DragEvent<HTMLDivElement>) => void;
+  onFileDrop: (event: DragEvent<HTMLElement>) => void;
   onFileInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onMrpackDownloadUrlChange: (mrpackDownloadUrl: string) => void;
   onProjectIdOrSlugChange: (projectIdOrSlug: string) => void;
@@ -601,29 +509,83 @@ function ConverterPanel({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isConversionRunning = conversionRunState.status === "working";
+  const [isMrpackPanelDropActive, setIsMrpackPanelDropActive] = useState(false);
 
   function openFilePicker() {
     fileInputRef.current?.click();
   }
 
+  function activateMrpackPanelDropZone(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+
+    if (isConversionRunning) {
+      event.dataTransfer.dropEffect = "none";
+      setIsMrpackPanelDropActive(false);
+      return;
+    }
+
+    event.dataTransfer.dropEffect = "copy";
+    setIsMrpackPanelDropActive(true);
+  }
+
+  function keepMrpackPanelDropZoneActive(event: DragEvent<HTMLElement>) {
+    activateMrpackPanelDropZone(event);
+  }
+
+  function deactivateMrpackPanelDropZone(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+
+    if (isDragStillInsideMrpackPanel(event.currentTarget, event.relatedTarget)) {
+      return;
+    }
+
+    setIsMrpackPanelDropActive(false);
+  }
+
+  function dropMrpackFile(event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+    setIsMrpackPanelDropActive(false);
+
+    if (isConversionRunning) {
+      return;
+    }
+
+    onFileDrop(event);
+  }
+
   return (
     <section
-      className="mx-auto mt-8 max-w-[1040px]"
       id="converter"
+      className={cn(
+        workbenchPanelClass,
+        "mrpack-panel transition-[border-color,box-shadow,background-color] duration-150",
+        isMrpackPanelDropActive &&
+          "border-lime-300/85 bg-[linear-gradient(180deg,rgba(56,78,52,0.98),rgba(17,26,21,0.98))] shadow-[0_0_38px_rgba(118,202,76,0.24),14px_16px_0_rgba(0,0,0,0.34),inset_0_3px_0_rgba(255,255,255,0.1),inset_0_-7px_0_rgba(0,0,0,0.2)]"
+      )}
+      onDragEnter={activateMrpackPanelDropZone}
+      onDragLeave={deactivateMrpackPanelDropZone}
+      onDragOver={keepMrpackPanelDropZoneActive}
+      onDrop={dropMrpackFile}
     >
-      <InputSourceTabs
-        activeInputMode={activeInputMode}
-        copy={copy}
-        disabled={isConversionRunning}
-        onInputModeChange={onActiveInputModeChange}
-      />
+      <span className="pointer-events-none absolute inset-3 rounded-[12px] border border-dashed border-[#f4e6bd1f]" />
+      <div className="relative">
+        <div className="mb-4 flex items-center justify-between gap-4 px-1">
+          <h2 className="text-lg font-black uppercase tracking-[0.09em] text-[#f4e6bd]">
+            {copy.converterPanel.previewPanel.title}
+          </h2>
+          <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#b7f276]">
+            <span className="size-2.5 bg-[#76ca4c] shadow-[0_0_14px_rgba(118,202,76,0.72)]" />
+            {isConversionRunning
+              ? copy.converterPanel.convertingButtonLabel
+              : copy.converterPanel.previewPanel.idleStatusLabel}
+          </span>
+        </div>
 
-      <div className="relative rounded-[22px] border border-lime-200/28 bg-[#0b1312]/68 p-3 shadow-[0_0_0_1px_rgba(128,255,82,0.08),0_24px_80px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:p-6">
-        <span className="absolute left-10 right-10 top-0 h-px bg-gradient-to-r from-transparent via-lime-300 to-transparent opacity-90 shadow-[0_0_22px_rgba(124,255,72,0.95)]" />
         <input
           aria-label={copy.converterPanel.modes.upload.inputLabel}
           accept=".mrpack"
           className="sr-only"
+          disabled={isConversionRunning}
           id={inputId}
           ref={fileInputRef}
           tabIndex={-1}
@@ -631,43 +593,73 @@ function ConverterPanel({
           onChange={onFileInputChange}
         />
 
-        {activeInputMode === "project" ? (
-          <TextSourceForm
-            convertingButtonLabel={copy.converterPanel.convertingButtonLabel}
-            disabled={isConversionRunning}
-            inputId="source-input-project"
-            inputModeCopy={copy.converterPanel.modes.project}
-            inputType="text"
-            value={projectIdOrSlug}
-            onStartConversion={onStartConversion}
-            onValueChange={onProjectIdOrSlugChange}
-          />
-        ) : null}
+        <InputSourceTabs
+          activeInputMode={activeInputMode}
+          copy={copy}
+          disabled={isConversionRunning}
+          onInputModeChange={onActiveInputModeChange}
+        />
 
-        {activeInputMode === "url" ? (
-          <TextSourceForm
-            convertingButtonLabel={copy.converterPanel.convertingButtonLabel}
-            disabled={isConversionRunning}
-            inputId="source-input-url"
-            inputModeCopy={copy.converterPanel.modes.url}
-            inputType="url"
-            value={mrpackDownloadUrl}
-            onStartConversion={onStartConversion}
-            onValueChange={onMrpackDownloadUrlChange}
-          />
-        ) : null}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_58px_minmax(0,0.78fr)] lg:items-stretch">
+          <div className={cn(workbenchInnerSlotClass, "p-4")}>
+            {activeInputMode === "project" ? (
+              <TextSourceForm
+                convertingButtonLabel={copy.converterPanel.convertingButtonLabel}
+                disabled={isConversionRunning}
+                inputId="source-input-project"
+                inputModeCopy={copy.converterPanel.modes.project}
+                inputType="text"
+                value={projectIdOrSlug}
+                onStartConversion={onStartConversion}
+                onValueChange={onProjectIdOrSlugChange}
+              />
+            ) : null}
 
-        {activeInputMode === "upload" ? (
-          <UploadSourceForm
-            copy={copy}
-            disabled={isConversionRunning}
-            inputId={inputId}
-            invalidFileName={invalidFileName}
-            selectedFileName={selectedFileName}
-            onFileDrop={onFileDrop}
-            onOpenFilePicker={openFilePicker}
-          />
-        ) : null}
+            {activeInputMode === "url" ? (
+              <TextSourceForm
+                convertingButtonLabel={copy.converterPanel.convertingButtonLabel}
+                disabled={isConversionRunning}
+                inputId="source-input-url"
+                inputModeCopy={copy.converterPanel.modes.url}
+                inputType="url"
+                value={mrpackDownloadUrl}
+                onStartConversion={onStartConversion}
+                onValueChange={onMrpackDownloadUrlChange}
+              />
+            ) : null}
+
+            {activeInputMode === "upload" ? (
+              <UploadSourceForm
+                copy={copy}
+                disabled={isConversionRunning}
+                inputId={inputId}
+                invalidFileName={invalidFileName}
+                isMrpackDropActive={isMrpackPanelDropActive}
+                selectedFileName={selectedFileName}
+                onOpenFilePicker={openFilePicker}
+              />
+            ) : null}
+          </div>
+
+          <div className="flex min-h-9 items-center justify-center text-5xl font-black text-[#b7f276] drop-shadow-[0_0_18px_rgba(118,202,76,0.42)] lg:min-h-0">
+            <span className="rotate-90 lg:rotate-0">›</span>
+          </div>
+
+          <div className={cn(workbenchInnerSlotClass, "flex flex-col justify-between p-4")}>
+            <div>
+              <p className="mb-3 text-xs font-black uppercase tracking-[0.09em] text-[#f4e6bd]">
+                {copy.converterPanel.previewPanel.outputSlotLabel}
+              </p>
+              <div className="flex min-h-[54px] items-center justify-between border-2 border-cyan-200/45 bg-[linear-gradient(135deg,rgba(104,217,233,0.28),rgba(7,16,13,0.55)),#081214] px-3 text-sm font-bold text-cyan-50 opacity-75 shadow-[inset_0_4px_0_rgba(0,0,0,0.34)]">
+                <span>{copy.converterPanel.previewPanel.outputFileLabel}</span>
+                <span className="size-7 border-2 border-white/30 bg-[linear-gradient(135deg,#baf8ff,#68d9e9_55%,#237a85_56%)] shadow-[4px_4px_0_rgba(0,0,0,0.3)]" />
+              </div>
+            </div>
+            <p className="mt-3 text-xs leading-5 text-[#b8c3b2]">
+              {copy.converterPanel.privacyNote}
+            </p>
+          </div>
+        </div>
 
         <ConversionStatusPanel
           conversionRunState={conversionRunState}
@@ -683,6 +675,13 @@ function ConverterPanel({
       </div>
     </section>
   );
+}
+
+function isDragStillInsideMrpackPanel(
+  mrpackPanelElement: HTMLElement,
+  nextDragTarget: EventTarget | null
+) {
+  return nextDragTarget instanceof Node && mrpackPanelElement.contains(nextDragTarget);
 }
 
 function InputSourceTabs({
@@ -707,10 +706,9 @@ function InputSourceTabs({
           <button
             aria-pressed={isActiveInputMode}
             className={cn(
-              "group min-h-[128px] rounded-2xl border bg-[#071017]/76 p-4 text-center shadow-[0_16px_44px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl transition hover:border-lime-300/50 hover:bg-[#0a1714]/82",
-              isActiveInputMode
-                ? "border-lime-300/70 bg-lime-300/[0.09] shadow-[0_0_0_1px_rgba(139,255,58,0.18),0_18px_48px_rgba(90,255,62,0.08)]"
-                : "border-white/12"
+              "group min-h-[72px] border-2 border-[#f4e6bd26] bg-[#07100f9e] p-3 text-left shadow-[inset_0_3px_0_rgba(255,255,255,0.04),inset_0_-5px_0_rgba(0,0,0,0.22)] transition hover:border-lime-300/50 hover:bg-[#0a1714]/80 disabled:cursor-not-allowed disabled:opacity-70",
+              isActiveInputMode &&
+                "border-lime-300/70 bg-[linear-gradient(180deg,rgba(118,202,76,0.20),rgba(7,16,13,0.64))] text-lime-100"
             )}
             disabled={disabled}
             key={inputMode}
@@ -719,18 +717,18 @@ function InputSourceTabs({
           >
             <span
               className={cn(
-                "mx-auto grid size-12 place-items-center rounded-xl border transition",
+                "mb-3 grid size-10 place-items-center border border-[#f4e6bd24] bg-white/[0.05] transition",
                 isActiveInputMode
-                  ? "border-lime-300/60 bg-lime-400 text-slate-950 shadow-[0_0_24px_rgba(116,255,70,0.28)]"
-                  : "border-white/12 bg-white/[0.06] text-slate-300 group-hover:text-lime-300"
+                  ? "border-lime-300/60 bg-[#76ca4c] text-[#08200f] shadow-[0_0_18px_rgba(118,202,76,0.28)]"
+                  : "text-[#b8c3b2] group-hover:text-[#b7f276]"
               )}
             >
               <InputModeIcon className="size-6" />
             </span>
             <span
               className={cn(
-                "mt-4 block text-lg font-black tracking-[-0.02em]",
-                isActiveInputMode ? "text-lime-300" : "text-white"
+                "block text-lg font-black tracking-[-0.02em]",
+                isActiveInputMode ? "text-lime-100" : "text-white"
               )}
             >
               {inputModeCopy.title}
@@ -766,44 +764,42 @@ function TextSourceForm({
 }) {
   return (
     <form
-      className="rounded-[18px] border border-dashed border-lime-300/34 bg-[#07100f]/62 px-4 py-6 shadow-[inset_0_0_92px_rgba(96,255,67,0.05)] sm:px-8"
+      className="space-y-3"
       onSubmit={(event) => {
         event.preventDefault();
         onStartConversion();
       }}
     >
       <label
-        className="block text-sm font-black text-lime-200"
+        className="block text-xs font-black uppercase tracking-[0.09em] text-[#f4e6bd]"
         htmlFor={inputId}
       >
         {inputModeCopy.inputLabel}
       </label>
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-        <Input
-          className="min-h-[52px] rounded-lg border-white/12 bg-black/24 px-4 text-base font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] selection:bg-lime-300 selection:text-slate-950 placeholder:text-slate-500 focus-visible:border-lime-300/70 focus-visible:ring-lime-300/20"
-          disabled={disabled}
-          id={inputId}
-          placeholder={inputModeCopy.inputPlaceholder}
-          type={inputType}
-          value={value}
-          onChange={(event) => onValueChange(event.currentTarget.value)}
-          onDoubleClick={(event) =>
-            selectInputTextOnDoubleClick({
-              inputElement: event.currentTarget,
-              inputType
-            })
-          }
-        />
-        <Button
-          className="min-h-[52px] w-full min-w-0 rounded-lg bg-gradient-to-b from-lime-300 to-lime-500 px-4 text-sm font-black text-slate-950 shadow-[0_0_28px_rgba(105,255,70,0.28),inset_0_1px_0_rgba(255,255,255,0.45)] hover:translate-y-[-1px] hover:from-lime-200 hover:to-lime-400 hover:text-slate-950 sm:w-auto sm:px-7 sm:text-base"
-          disabled={disabled}
-          size="lg"
-          type="submit"
-        >
-          {disabled ? <Loader2 className="size-5 animate-spin" /> : <FileArchive className="size-5" />}
-          {disabled ? convertingButtonLabel : inputModeCopy.actionLabel}
-        </Button>
-      </div>
+      <Input
+        className="min-h-[54px] rounded-none border-2 border-[#f4e6bd2e] bg-[#050c0ae6] px-4 text-base font-semibold text-white shadow-[inset_0_4px_0_rgba(0,0,0,0.34)] selection:bg-lime-300 selection:text-slate-950 placeholder:text-[#b8c3b2]/55 focus-visible:border-lime-300/70 focus-visible:ring-lime-300/20"
+        disabled={disabled}
+        id={inputId}
+        placeholder={inputModeCopy.inputPlaceholder}
+        type={inputType}
+        value={value}
+        onChange={(event) => onValueChange(event.currentTarget.value)}
+        onDoubleClick={(event) =>
+          selectInputTextOnDoubleClick({
+            inputElement: event.currentTarget,
+            inputType
+          })
+        }
+      />
+      <Button
+        className={cn(workbenchPrimaryButtonClass, "w-full")}
+        disabled={disabled}
+        size="lg"
+        type="submit"
+      >
+        {disabled ? <Loader2 className="size-5 animate-spin" /> : <FileArchive className="size-5" />}
+        {disabled ? convertingButtonLabel : inputModeCopy.actionLabel}
+      </Button>
     </form>
   );
 }
@@ -813,7 +809,7 @@ function UploadSourceForm({
   disabled,
   inputId,
   invalidFileName,
-  onFileDrop,
+  isMrpackDropActive,
   onOpenFilePicker,
   selectedFileName
 }: {
@@ -821,7 +817,7 @@ function UploadSourceForm({
   disabled: boolean;
   inputId: string;
   invalidFileName: string | null;
-  onFileDrop: (event: DragEvent<HTMLDivElement>) => void;
+  isMrpackDropActive: boolean;
   onOpenFilePicker: () => void;
   selectedFileName: string | null;
 }) {
@@ -831,46 +827,62 @@ function UploadSourceForm({
     : null;
   const uploadStatusText = selectedFileName
     ? `${copy.converterPanel.selectedFilePrefix}: ${selectedFileName}. ${copy.converterPanel.readyMessage}`
-    : copy.converterPanel.privacyNote;
+    : copy.converterPanel.modes.upload.inputPlaceholder;
 
   return (
     <div
-      className="rounded-[18px] border border-dashed border-lime-300/34 bg-[#07100f]/62 px-3 py-7 text-center shadow-[inset_0_0_92px_rgba(96,255,67,0.05)] transition hover:border-lime-300/58 hover:bg-[#0a1613]/72 sm:px-8"
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={disabled ? undefined : onFileDrop}
+      className={cn(
+        "space-y-3 transition-[filter]",
+        isMrpackDropActive && "drop-shadow-[0_0_18px_rgba(118,202,76,0.22)]"
+      )}
     >
-      <div className="mx-auto flex size-[104px] flex-col items-center justify-end rounded-2xl border border-white/18 bg-gradient-to-br from-slate-500/42 to-slate-950/88 p-0 shadow-[0_18px_42px_rgba(0,0,0,0.45)]">
-        <FileText className="mb-2.5 size-11 text-lime-400 drop-shadow-[0_0_18px_rgba(116,255,70,0.34)]" />
-        <span className="w-[90px] rounded-lg bg-lime-400 px-3 py-1.5 text-sm font-black text-slate-950 shadow-[0_0_18px_rgba(116,255,70,0.32)]">
-          {copy.converterPanel.fileTypeLabel}
+      <label
+        className="block text-xs font-black uppercase tracking-[0.09em] text-[#f4e6bd]"
+        htmlFor={inputId}
+      >
+        {copy.converterPanel.modes.upload.inputLabel}
+      </label>
+      <div
+        aria-describedby={uploadStatusId}
+        className={cn(
+          "flex min-h-[54px] items-center justify-between gap-3 border-2 bg-[#050c0ae6] px-4 text-base font-semibold shadow-[inset_0_4px_0_rgba(0,0,0,0.34)] transition",
+          isMrpackDropActive
+            ? "border-lime-300 bg-[linear-gradient(135deg,rgba(118,202,76,0.22),rgba(7,16,13,0.88))] text-lime-50 shadow-[0_0_30px_rgba(118,202,76,0.22),inset_0_4px_0_rgba(0,0,0,0.28)]"
+            : invalidFileMessageText
+            ? "border-amber-300/55 text-amber-100"
+            : "border-[#f4e6bd2e] text-white"
+        )}
+      >
+        <span
+          className={cn(
+            "min-w-0 truncate",
+            selectedFileName ? "text-white" : "text-[#b8c3b2]/55"
+          )}
+        >
+          {selectedFileName ?? copy.converterPanel.modes.upload.inputPlaceholder}
+        </span>
+        <span
+          aria-hidden="true"
+          className="inline-flex size-10 shrink-0 items-center justify-center text-lime-300"
+        >
+          <FileText className="size-5" />
         </span>
       </div>
-
-      <h2 className="mt-5 text-xl font-black tracking-[-0.02em] text-white sm:text-3xl">
-        {copy.converterPanel.dropTitle}
-      </h2>
-      <p className="mx-auto mt-2 max-w-[520px] text-sm leading-6 text-slate-300">
-        {copy.converterPanel.dropDescription}
-      </p>
-      <p className="mt-3 text-sm text-slate-400">{copy.converterPanel.separatorLabel}</p>
-
-      <div className="mt-4 flex flex-col justify-center gap-3 sm:flex-row">
-        <Button
-          className="min-h-[52px] w-full min-w-0 rounded-lg bg-gradient-to-b from-lime-300 to-lime-500 px-4 text-sm font-black text-slate-950 shadow-[0_0_28px_rgba(105,255,70,0.28),inset_0_1px_0_rgba(255,255,255,0.45)] hover:translate-y-[-1px] hover:from-lime-200 hover:to-lime-400 hover:text-slate-950 hover:shadow-[0_0_34px_rgba(105,255,70,0.4),inset_0_1px_0_rgba(255,255,255,0.5)] sm:w-auto sm:px-8 sm:text-base"
-          disabled={disabled}
-          size="lg"
-          type="button"
-          onClick={onOpenFilePicker}
-        >
-          {copy.converterPanel.selectButtonLabel}
-          <Upload className="size-5" />
-        </Button>
-      </div>
+      <Button
+        className={cn(workbenchPrimaryButtonClass, "w-full")}
+        disabled={disabled}
+        size="lg"
+        type="button"
+        onClick={onOpenFilePicker}
+      >
+        <Upload className="size-5" />
+        {copy.converterPanel.selectButtonLabel}
+      </Button>
 
       <p
         aria-live="polite"
         className={cn(
-          "mx-auto mt-5 flex max-w-[620px] items-center justify-center gap-2 text-sm leading-6",
+          "flex items-start gap-2 text-sm leading-6",
           invalidFileMessageText ? "text-amber-200" : "text-slate-300"
         )}
         id={uploadStatusId}
@@ -903,7 +915,7 @@ function ConversionStatusPanel({
 }) {
   if (conversionRunState.status === "idle") {
     return (
-      <p className="mt-4 flex items-start gap-2 rounded-xl border border-lime-300/14 bg-lime-300/[0.055] px-4 py-3 text-sm leading-6 text-lime-100/86">
+      <p className="mt-4 flex items-start gap-2 border-2 border-lime-200/20 bg-lime-300/[0.07] px-4 py-3 text-sm leading-6 text-lime-100 shadow-[6px_6px_0_rgba(0,0,0,0.18),inset_0_2px_0_rgba(255,255,255,0.05)]">
         <ShieldCheck className="mt-0.5 size-4 shrink-0" />
         <span>{copy.converterPanel.privacyNote}</span>
       </p>
@@ -926,7 +938,7 @@ function ConversionStatusPanel({
     return (
       <div
         aria-live="polite"
-        className="mt-4 rounded-xl border border-amber-300/22 bg-amber-300/[0.075] px-4 py-3 text-sm leading-6 text-amber-100"
+        className="mt-4 border-2 border-red-300/35 bg-red-500/[0.10] px-4 py-3 text-sm leading-6 text-red-50 shadow-[6px_6px_0_rgba(0,0,0,0.18),inset_0_2px_0_rgba(255,255,255,0.05)]"
       >
         <div className="flex items-start gap-2 font-black">
           <CircleAlert className="mt-0.5 size-4 shrink-0" />
@@ -940,31 +952,31 @@ function ConversionStatusPanel({
   return (
     <div
       aria-live="polite"
-      className="mt-4 rounded-xl border border-lime-300/22 bg-lime-300/[0.075] px-4 py-4 text-sm leading-6 text-lime-50"
+      className="mt-4 border-2 border-cyan-200/35 bg-cyan-300/[0.10] px-4 py-4 text-sm leading-6 text-cyan-50 shadow-[6px_6px_0_rgba(0,0,0,0.18),inset_0_2px_0_rgba(255,255,255,0.05)]"
     >
-      <div className="flex items-start gap-2 font-black text-lime-200">
+      <div className="flex items-start gap-2 font-black text-cyan-100">
         <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
         <span>{copy.converterPanel.resultTitle}</span>
       </div>
       <CompletedConversionProgressBar label={copy.converterPanel.resultTitle} />
       <dl className="mt-3 grid gap-2 text-slate-200 sm:grid-cols-2">
-        <ConversionResultValue
+        <MinecraftWorkbenchSummaryValue
           label={copy.converterPanel.outputFileLabel}
           value={conversionRunState.result.outputZipFileName}
         />
-        <ConversionResultValue
+        <MinecraftWorkbenchSummaryValue
           label={copy.converterPanel.sourceFileLabel}
           value={conversionRunState.result.sourceFileName}
         />
-        <ConversionResultValue
+        <MinecraftWorkbenchSummaryValue
           label={copy.converterPanel.referencedFilesLabel}
           value={`${conversionRunState.result.downloadedFileCount}/${conversionRunState.result.referencedFileCount}`}
         />
-        <ConversionResultValue
+        <MinecraftWorkbenchSummaryValue
           label={copy.converterPanel.overrideFilesLabel}
           value={String(conversionRunState.result.overrideFileCount)}
         />
-        <ConversionResultValue
+        <MinecraftWorkbenchSummaryValue
           label={copy.converterPanel.failedDownloadsLabel}
           value={String(conversionRunState.result.failedDownloadCount)}
         />
@@ -976,7 +988,7 @@ function ConversionStatusPanel({
       </p>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <Button
-          className="min-h-11 rounded-lg bg-lime-400 font-black text-slate-950 hover:bg-lime-300 hover:text-slate-950"
+          className={workbenchPrimaryButtonClass}
           type="button"
           onClick={() => onDownload(conversionRunState.result)}
         >
@@ -984,7 +996,7 @@ function ConversionStatusPanel({
           <FileArchive className="size-4" />
         </Button>
         <Button
-          className="min-h-11 rounded-lg border-white/12 bg-white/[0.045] font-black text-slate-200 hover:border-lime-300/40 hover:bg-white/[0.07] hover:text-lime-200"
+          className={workbenchSecondaryButtonClass}
           type="button"
           variant="outline"
           onClick={onResetConversion}
@@ -1024,46 +1036,86 @@ function CompletedConversionProgressBar({ label }: { label: string }) {
   );
 }
 
-function ConversionResultValue({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
+function ConversionStatesSection({ copy }: { copy: ConverterPageCopy }) {
+  const conversionStateCards = [
+    {
+      title: copy.converterPanel.previewPanel.idleStatusLabel,
+      description: copy.converterPanel.emptyInputMessages.project,
+      dotClassName: "bg-[#76ca4c] shadow-[0_0_14px_rgba(118,202,76,0.52)]"
+    },
+    {
+      title: copy.converterPanel.convertingButtonLabel,
+      description: [
+        copy.converterPanel.stageLabels["fetching-source"],
+        copy.converterPanel.stageLabels["reading-index"],
+        copy.converterPanel.stageLabels["downloading-files"],
+        copy.converterPanel.stageLabels["building-zip"]
+      ].join(" "),
+      dotClassName: "bg-[#ffc766] shadow-[0_0_14px_rgba(255,199,102,0.52)]"
+    },
+    {
+      title: copy.converterPanel.resultTitle,
+      description: copy.converterPanel.successNote,
+      dotClassName: "bg-[#68d9e9] shadow-[0_0_14px_rgba(104,217,233,0.52)]"
+    },
+    {
+      title: copy.converterPanel.errorTitle,
+      description:
+        copy.converterLimits.paragraphs[1] ?? copy.converterPanel.invalidFileMessage,
+      dotClassName: "bg-[#ff6259] shadow-[0_0_14px_rgba(255,98,89,0.52)]"
+    }
+  ];
+
   return (
-    <div className="min-w-0 rounded-lg border border-white/10 bg-black/18 px-3 py-2">
-      <dt className="text-xs font-black uppercase tracking-[0.08em] text-slate-400">
-        {label}
-      </dt>
-      <dd className="mt-1 min-w-0 break-words font-semibold text-white">{value}</dd>
-    </div>
+    <section
+      aria-label={copy.conversionStates.ariaLabel}
+      className="mx-auto mt-12 max-w-[1040px]"
+    >
+      <div className="state-grid grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {conversionStateCards.map((conversionStateCard) => (
+          <article
+            className={cn(workbenchMiniPanelClass, "state-card min-h-[188px]")}
+            key={conversionStateCard.title}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-black uppercase tracking-[0.08em] text-[#f4e6bd]">
+                {conversionStateCard.title}
+              </span>
+              <span
+                aria-hidden="true"
+                className={cn("size-3 shrink-0 rounded-full", conversionStateCard.dotClassName)}
+              />
+            </div>
+            <p className="mt-4 text-sm leading-7 text-slate-300">
+              {conversionStateCard.description}
+            </p>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
 function InfoSection({ info }: { info: InfoSectionCopy }) {
+  const leadingParagraphs = info.paragraphs.slice(0, 2);
+  const trailingParagraphs = info.paragraphs.slice(2);
+
   return (
     <ContentSection
       id="mrpack-file"
       icon={FileText}
       title={info.title}
     >
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
-        <div className="space-y-4 text-base leading-8 text-slate-300">
-          {info.paragraphs.map((paragraph) => (
+      <div className="two-col grid gap-6 lg:grid-cols-2 lg:items-start">
+        <div className={cn(workbenchInfoPanelClass, "space-y-4 text-base leading-8 text-[#c8d3c2]")}>
+          {leadingParagraphs.map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
         </div>
-        <div className="rounded-2xl border border-lime-300/18 bg-[#071017]/74 p-5 font-mono text-xs leading-6 text-lime-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-          <div className="mb-3 flex items-center gap-2 text-slate-300">
-            <Layers3 className="size-4 text-lime-300" />
-            <span>modrinth.index.json</span>
-          </div>
-          <p>{'{'}</p>
-          <p className="pl-4">"formatVersion": 1,</p>
-          <p className="pl-4">"files": ["mods/..."],</p>
-          <p className="pl-4">"dependencies": {'{'} ... {'}'}</p>
-          <p>{'}'}</p>
+        <div className={cn(workbenchInfoPanelClass, "space-y-4 text-base leading-8 text-[#c8d3c2]")}>
+          {trailingParagraphs.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
         </div>
       </div>
     </ContentSection>
@@ -1084,11 +1136,8 @@ function HowToConvertSection({
     >
       <div className="grid gap-4 md:grid-cols-3">
         {sectionCopy.steps.map((step, stepIndex) => (
-          <article
-            className="rounded-2xl border border-white/12 bg-[#071017]/78 p-5 shadow-[0_16px_44px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl"
-            key={step.title}
-          >
-            <span className="grid size-11 place-items-center rounded-full bg-lime-400 text-base font-black text-slate-950 shadow-[0_0_20px_rgba(116,255,70,0.28)]">
+          <article className={workbenchMiniPanelClass} key={step.title}>
+            <span className="grid size-11 place-items-center bg-[linear-gradient(180deg,#b7f276,#76ca4c)] text-base font-black text-[#08200f] shadow-[0_0_20px_rgba(118,202,76,0.28)]">
               {stepIndex + 1}
             </span>
             <h3 className="mt-5 text-lg font-black tracking-[-0.02em] text-white">
@@ -1114,7 +1163,7 @@ function ConverterLimitsSection({ info }: { info: InfoSectionCopy }) {
       <div className="grid gap-3 md:grid-cols-2">
         {info.paragraphs.map((paragraph) => (
           <p
-            className="rounded-2xl border border-amber-300/16 bg-amber-300/[0.055] p-5 text-sm leading-7 text-amber-50/88"
+            className="border-2 border-red-300/25 bg-red-500/[0.08] p-5 text-sm leading-7 text-red-50/90 shadow-[8px_8px_0_rgba(0,0,0,0.2),inset_0_2px_0_rgba(255,255,255,0.04)]"
             key={paragraph}
           >
             {paragraph}
@@ -1137,14 +1186,21 @@ function LauncherSupportSection({
       title={launcherSupport.title}
       description={launcherSupport.description}
     >
-      <div className="overflow-hidden rounded-2xl border border-white/12 bg-[#071017]/78 shadow-[0_16px_44px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl">
-        <div className="hidden grid-cols-[1.1fr_0.85fr_0.8fr_1.45fr] border-b border-white/10 bg-white/[0.035] px-5 py-3 text-xs font-black uppercase tracking-[0.08em] text-slate-400 md:grid">
+      <div
+        aria-label={launcherSupport.tableAriaLabel}
+        className="support-table overflow-hidden border-2 border-[#f4e6bd2b] bg-[#07100fb8] shadow-[10px_10px_0_rgba(0,0,0,0.22),inset_0_2px_0_rgba(255,255,255,0.05)]"
+        role="table"
+      >
+        <div
+          className="hidden grid-cols-[1.1fr_0.85fr_0.8fr_1.45fr] border-b border-[#f4e6bd1f] bg-[#24302bb3] px-5 py-3 text-xs font-black uppercase tracking-[0.08em] text-[#f4e6bd] md:grid"
+          role="row"
+        >
           <span>{launcherSupport.launcherHeader}</span>
           <span>{launcherSupport.mrpackHeader}</span>
           <span>{launcherSupport.zipHeader}</span>
           <span>{launcherSupport.noteHeader}</span>
         </div>
-        <div className="divide-y divide-white/8">
+        <div>
           {launcherSupport.rows.map((launcherRow) => (
             <LauncherSupportRow
               launcherSupport={launcherSupport}
@@ -1166,7 +1222,10 @@ function LauncherSupportRow({
   launcherSupport: LauncherSupportCopy;
 }) {
   return (
-    <article className="grid gap-3 px-5 py-4 text-sm text-slate-300 md:grid-cols-[1.1fr_0.85fr_0.8fr_1.45fr] md:items-center">
+    <article
+      className="support-row grid gap-3 border-b border-[#f4e6bd1f] px-5 py-4 text-sm text-[#cbd6c6] last:border-b-0 md:grid-cols-[1.1fr_0.85fr_0.8fr_1.45fr] md:items-center"
+      role="row"
+    >
       <h3 className="font-black text-white">{launcherRow.targetName}</h3>
       <LabeledValue
         label={launcherSupport.mrpackHeader}
@@ -1298,7 +1357,7 @@ function FaqSection({
 
           return (
             <AccordionItem
-              className="overflow-hidden rounded-2xl border border-white/12 bg-black/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-xl"
+              className="overflow-hidden border-2 border-[#f4e6bd21] bg-[#18211ec2] shadow-[inset_0_2px_0_rgba(255,255,255,0.04),8px_8px_0_rgba(0,0,0,0.18)]"
               key={faqItem.question}
               value={faqItem.question}
               onMouseEnter={() => expandQuestionOnHover(faqItem.question)}
@@ -1306,14 +1365,14 @@ function FaqSection({
             >
               <AccordionTrigger
                 aria-controls={faqItemDomIds.contentId}
-                className="gap-3 px-5 py-4 text-base font-bold text-white hover:text-lime-300 hover:no-underline [&>svg]:text-slate-300 [&[data-state=open]>svg]:text-lime-300"
+                className="gap-3 px-5 py-4 text-base font-black text-[#f4e6bd] hover:text-[#b7f276] hover:no-underline [&>svg]:text-[#b8c3b2] [&[data-state=open]>svg]:text-[#b7f276]"
                 id={faqItemDomIds.triggerId}
               >
                 <span className="min-w-0">{faqItem.question}</span>
               </AccordionTrigger>
               <AccordionContent
                 aria-labelledby={faqItemDomIds.triggerId}
-                className="px-5 pb-5 text-sm leading-7 text-slate-300"
+                className="px-5 pb-5 text-sm leading-7 text-[#c8d3c2]"
                 id={faqItemDomIds.contentId}
               >
                 <p>{faqItem.answer}</p>
@@ -1340,86 +1399,39 @@ function ContentSection({
   title: string;
 }) {
   return (
-    <section
-      className="mx-auto mt-12 max-w-[1040px] border-t border-white/10 pt-10"
+    <MinecraftWorkbenchContentSection
+      description={description}
+      icon={icon}
       id={id}
+      title={title}
     >
-      <div className="mb-6">
-        <SectionHeading icon={icon} title={title} />
-        {description ? (
-          <p className="mt-3 max-w-[680px] text-base leading-7 text-slate-300">
-            {description}
-          </p>
-        ) : null}
-      </div>
       {children}
-    </section>
+    </MinecraftWorkbenchContentSection>
   );
 }
 
 function SectionHeading({
-  icon: Icon,
+  icon,
   title
 }: {
   icon: LucideIcon;
   title: string;
 }) {
-  return (
-    <div className="flex min-w-0 items-center gap-3">
-      <Icon className="size-7 shrink-0 text-lime-400 drop-shadow-[0_0_16px_rgba(116,255,70,0.24)]" />
-      <h2 className="min-w-0 text-2xl font-black tracking-[-0.03em] text-white sm:text-3xl">
-        {title}
-      </h2>
-    </div>
-  );
+  return <MinecraftWorkbenchSectionHeading icon={icon} title={title} />;
 }
 
 function PageFooter({ copy }: { copy: ConverterPageCopy }) {
   const logoHref = copy.localeCode === "zh-Hans" ? "/zh" : "/";
 
   return (
-    <footer className="border-t border-white/[0.08] bg-[#05090d]/86 backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
-          <div>
-            <Link className="flex items-center gap-2" href={logoHref}>
-              <Box className="size-6 text-lime-400" />
-              <span className="text-lg font-black tracking-[-0.03em] text-white">
-                {copy.logoText}
-                <span className="text-lime-400">{copy.logoAccent}</span>
-              </span>
-            </Link>
-            <p className="mt-2 max-w-[420px] text-sm leading-6 text-slate-400">
-              {copy.footer.tagline}
-            </p>
-          </div>
-
-          <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-slate-400">
-            {copy.footer.links.map((footerLink) => (
-              <Link
-                className="transition hover:text-lime-300"
-                href={footerLink.href}
-                key={footerLink.label}
-              >
-                {footerLink.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-white/[0.06] pt-5 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
-          <p>{copy.footer.copyright}</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <p>{copy.footer.disclaimer}</p>
-            <span
-              aria-hidden="true"
-              className="hidden h-3 w-px bg-white/12 md:block"
-            />
-            <Github className="size-4" />
-            <LockKeyhole className="size-4" />
-          </div>
-        </div>
-      </div>
-    </footer>
+    <MinecraftWorkbenchFooter
+      copyright={copy.footer.copyright}
+      disclaimer={copy.footer.disclaimer}
+      links={copy.footer.links}
+      logoAccent={copy.logoAccent}
+      logoHref={logoHref}
+      logoText={copy.logoText}
+      tagline={copy.footer.tagline}
+    />
   );
 }

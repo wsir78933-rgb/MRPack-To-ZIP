@@ -1,0 +1,29 @@
+# MRPack to ZIP
+
+> Browser-based Minecraft modpack conversion tools for MRPack and CurseForge ZIP formats.
+
+## Core Pages
+
+- [MRPack to ZIP Converter](https://mrpacktozip.pro/)
+- [ZIP to MRPack Converter](https://mrpacktozip.pro/zip-to-mrpack)
+- [Chinese MRPack to ZIP Converter](https://mrpacktozip.pro/zh)
+- [Chinese ZIP to MRPack Converter](https://mrpacktozip.pro/zh/zip-to-mrpack)
+
+## Trust Pages
+
+- [About](https://mrpacktozip.pro/about)
+- [About - Chinese](https://mrpacktozip.pro/zh/about)
+- [Privacy Policy](https://mrpacktozip.pro/privacy)
+- [Privacy Policy - Chinese](https://mrpacktozip.pro/zh/privacy)
+- [Terms of Use](https://mrpacktozip.pro/terms)
+- [Terms of Use - Chinese](https://mrpacktozip.pro/zh/terms)
+- [Contact](https://mrpacktozip.pro/contact)
+- [Contact - Chinese](https://mrpacktozip.pro/zh/contact)
+
+## Site Notes
+
+- MRPack to ZIP converts Modrinth `.mrpack` packages into launcher-ready ZIP files.
+- ZIP to MRPack converts CurseForge modpack ZIP exports into Modrinth-compatible MRPack files.
+- Browser-based conversion is preferred where the source format allows it.
+- CurseForge ZIP conversion uses a protected server-side CurseForge API proxy for metadata and download authorization.
+- Support and policy contact: contact@mrpacktozip.pro

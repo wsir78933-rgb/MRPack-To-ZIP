@@ -5,17 +5,25 @@ import {
   fetchCurseForgeFilesByIds,
   parseCurseForgeFileMetadataRequest,
 } from "@/lib/curseforge-api/files";
+import {
+  createCurseForgeApiErrorResponse,
+  createInvalidCurseForgeRequestResponse,
+  createMissingCurseForgeApiKeyResponse,
+  createUnexpectedCurseForgeRouteErrorResponse,
+  readJsonRequestBody,
+} from "@/lib/curseforge-api/route-errors";
 
 export async function POST(request: Request) {
   let requestJson: unknown;
 
   try {
-    requestJson = await request.json();
+    requestJson = await readJsonRequestBody(request);
   } catch (caughtError) {
-    return jsonErrorResponse(
-      `Invalid CurseForge request body JSON: ${formatErrorReason(caughtError)}.`,
-      400,
-    );
+    if (caughtError instanceof CurseForgeRequestValidationError) {
+      return createInvalidCurseForgeRequestResponse(caughtError);
+    }
+
+    throw caughtError;
   }
 
   let fileReferences;
@@ -23,7 +31,7 @@ export async function POST(request: Request) {
     fileReferences = parseCurseForgeFileMetadataRequest(requestJson);
   } catch (caughtError) {
     if (caughtError instanceof CurseForgeRequestValidationError) {
-      return jsonErrorResponse(caughtError.message, caughtError.status);
+      return createInvalidCurseForgeRequestResponse(caughtError);
     }
 
     throw caughtError;
@@ -31,7 +39,7 @@ export async function POST(request: Request) {
 
   const curseForgeApiKey = readCurseForgeApiKey();
   if (!curseForgeApiKey) {
-    return jsonErrorResponse("Missing server env CURSEFORGE_API_KEY for CurseForge API requests.", 500);
+    return createMissingCurseForgeApiKeyResponse();
   }
 
   try {
@@ -43,12 +51,11 @@ export async function POST(request: Request) {
     return Response.json({ files });
   } catch (caughtError) {
     if (caughtError instanceof CurseForgeApiResponseError) {
-      return jsonErrorResponse(caughtError.message, caughtError.status);
+      return createCurseForgeApiErrorResponse(caughtError);
     }
 
-    return jsonErrorResponse(
-      `Failed to fetch CurseForge file metadata: ${formatErrorReason(caughtError)}.`,
-      502,
+    return createUnexpectedCurseForgeRouteErrorResponse(
+      "curseforge_files_fetch_failed",
     );
   }
 }
@@ -56,16 +63,4 @@ export async function POST(request: Request) {
 function readCurseForgeApiKey() {
   const curseForgeApiKey = process.env.CURSEFORGE_API_KEY?.trim();
   return curseForgeApiKey && curseForgeApiKey.length > 0 ? curseForgeApiKey : null;
-}
-
-function jsonErrorResponse(error: string, status: number) {
-  return Response.json({ error }, { status });
-}
-
-function formatErrorReason(caughtError: unknown) {
-  if (caughtError instanceof Error) {
-    return caughtError.message;
-  }
-
-  return String(caughtError);
 }

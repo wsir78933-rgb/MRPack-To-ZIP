@@ -124,6 +124,25 @@ describe("converter page copy", () => {
       expect(chinesePageText).toContain(expectedLimitText);
     }
   });
+
+  test("links trust pages from English and Chinese homepage footers", () => {
+    expect(englishConverterPageCopy.footer.links).toEqual(
+      expect.arrayContaining([
+        { label: "About", href: "/about" },
+        { label: "Privacy", href: "/privacy" },
+        { label: "Terms", href: "/terms" },
+        { label: "Contact", href: "/contact" },
+      ]),
+    );
+    expect(chineseConverterPageCopy.footer.links).toEqual(
+      expect.arrayContaining([
+        { label: "关于", href: "/zh/about" },
+        { label: "隐私", href: "/zh/privacy" },
+        { label: "条款", href: "/zh/terms" },
+        { label: "联系", href: "/zh/contact" },
+      ]),
+    );
+  });
 });
 
 function collectCopyText(copyValue: unknown): string {

@@ -3,9 +3,17 @@ import { fetchCurseForgeFilesByIds } from "@/lib/curseforge-api/server-files";
 import {
   CurseForgeApiResponseError,
   CurseForgeRequestValidationError,
+  formatErrorReason,
   type CurseForgeFileMetadata,
   type CurseForgeFileReference,
 } from "@/lib/curseforge-api/types";
+import {
+  createCurseForgeApiErrorResponse,
+  createInvalidCurseForgeRequestResponse,
+  createMissingCurseForgeApiKeyResponse,
+  createUnexpectedCurseForgeRouteErrorResponse,
+  readJsonRequestBody,
+} from "@/lib/curseforge-api/route-errors";
 
 const allowedCurseForgeDownloadHost = "edge.forgecdn.net";
 
@@ -13,12 +21,13 @@ export async function POST(request: Request) {
   let requestJson: unknown;
 
   try {
-    requestJson = await request.json();
+    requestJson = await readJsonRequestBody(request);
   } catch (caughtError) {
-    return jsonErrorResponse(
-      `Invalid CurseForge download request body JSON: ${formatErrorReason(caughtError)}.`,
-      400,
-    );
+    if (caughtError instanceof CurseForgeRequestValidationError) {
+      return createInvalidCurseForgeRequestResponse(caughtError);
+    }
+
+    throw caughtError;
   }
 
   let fileReference: CurseForgeFileReference;
@@ -26,7 +35,7 @@ export async function POST(request: Request) {
     fileReference = parseCurseForgeFileReference(requestJson, "fileReference");
   } catch (caughtError) {
     if (caughtError instanceof CurseForgeRequestValidationError) {
-      return jsonErrorResponse(caughtError.message, caughtError.status);
+      return createInvalidCurseForgeRequestResponse(caughtError);
     }
 
     throw caughtError;
@@ -34,7 +43,7 @@ export async function POST(request: Request) {
 
   const curseForgeApiKey = readCurseForgeApiKey();
   if (!curseForgeApiKey) {
-    return jsonErrorResponse("Missing server env CURSEFORGE_API_KEY for CurseForge API requests.", 500);
+    return createMissingCurseForgeApiKeyResponse();
   }
 
 	try {
@@ -47,15 +56,31 @@ export async function POST(request: Request) {
     });
 
 		if (!curseForgeResponse.ok) {
-			return jsonErrorResponse(
+			throw new CurseForgeApiResponseError(
 				`CurseForge file download returned ${curseForgeResponse.status} ${curseForgeResponse.statusText} for projectId ${fileReference.projectId}, fileId ${fileReference.fileId}.`,
-				502,
+				{
+					reason: "curseforge_cdn_http_error",
+					details: {
+						fileId: fileReference.fileId,
+						projectId: fileReference.projectId,
+						status: curseForgeResponse.status,
+						statusText: curseForgeResponse.statusText,
+					},
+				},
 			);
 		}
 
 		if (!curseForgeResponse.body) {
 			throw new CurseForgeApiResponseError(
 				`CurseForge CDN returned body null for projectId ${fileReference.projectId}, fileId ${fileReference.fileId}, downloadUrl ${downloadUrl}.`,
+				{
+					reason: "download_body_missing",
+					details: {
+						downloadUrl,
+						fileId: fileReference.fileId,
+						projectId: fileReference.projectId,
+					},
+				},
 			);
 		}
 
@@ -68,12 +93,16 @@ export async function POST(request: Request) {
     });
   } catch (caughtError) {
     if (caughtError instanceof CurseForgeApiResponseError) {
-      return jsonErrorResponse(caughtError.message, caughtError.status);
+      return createCurseForgeApiErrorResponse(caughtError);
     }
 
-    return jsonErrorResponse(
-      `Failed to download CurseForge file projectId ${fileReference.projectId}, fileId ${fileReference.fileId}: ${formatErrorReason(caughtError)}.`,
+    return createUnexpectedCurseForgeRouteErrorResponse(
+      "curseforge_download_failed",
       502,
+      {
+        fileId: fileReference.fileId,
+        projectId: fileReference.projectId,
+      },
     );
   }
 }
@@ -91,18 +120,27 @@ async function resolveCurseForgeFileMetadata(
   if (!curseForgeFile) {
     throw new CurseForgeApiResponseError(
       `CurseForge files API did not return fileId ${fileReference.fileId}.`,
+      {
+        reason: "file_metadata_missing",
+        details: {
+          fileId: fileReference.fileId,
+          projectId: fileReference.projectId,
+        },
+      },
     );
   }
 
 	if (curseForgeFile.modId !== fileReference.projectId) {
 		throw new CurseForgeApiResponseError(
 			`CurseForge file projectId mismatch for fileId ${fileReference.fileId}: expected projectId ${fileReference.projectId}, got ${curseForgeFile.modId}.`,
-		);
-	}
-
-	if (!curseForgeFile.isAvailable) {
-		throw new CurseForgeApiResponseError(
-			`CurseForge file isAvailable false for projectId ${fileReference.projectId}, fileId ${fileReference.fileId}.`,
+			{
+				reason: "project_id_mismatch",
+				details: {
+					actualProjectId: curseForgeFile.modId,
+					expectedProjectId: fileReference.projectId,
+					fileId: fileReference.fileId,
+				},
+			},
 		);
 	}
 
@@ -116,6 +154,13 @@ function parseDownloadUrl(
 	if (!curseForgeFile.downloadUrl) {
 		throw new CurseForgeApiResponseError(
 			`CurseForge file projectId ${fileReference.projectId}, fileId ${fileReference.fileId} has no downloadUrl.`,
+			{
+				reason: "download_url_missing",
+				details: {
+					fileId: fileReference.fileId,
+					projectId: fileReference.projectId,
+				},
+			},
 		);
 	}
 
@@ -125,18 +170,44 @@ function parseDownloadUrl(
 	} catch (caughtError) {
 		throw new CurseForgeApiResponseError(
 			`CurseForge file projectId ${fileReference.projectId}, fileId ${fileReference.fileId} has invalid downloadUrl ${curseForgeFile.downloadUrl}: ${formatErrorReason(caughtError)}.`,
+				{
+					reason: "download_url_invalid",
+					details: {
+						downloadUrl: curseForgeFile.downloadUrl,
+						fileId: fileReference.fileId,
+						projectId: fileReference.projectId,
+				},
+			},
 		);
 	}
 
 	if (downloadUrl.protocol !== "https:") {
 		throw new CurseForgeApiResponseError(
 			`Expected https CurseForge file download URL for projectId ${fileReference.projectId}, fileId ${fileReference.fileId}, got ${curseForgeFile.downloadUrl}.`,
+			{
+				reason: "download_url_not_https",
+				details: {
+					actualProtocol: downloadUrl.protocol,
+					downloadUrl: curseForgeFile.downloadUrl,
+					fileId: fileReference.fileId,
+					projectId: fileReference.projectId,
+				},
+			},
 		);
 	}
 
 	if (downloadUrl.hostname !== allowedCurseForgeDownloadHost) {
 		throw new CurseForgeApiResponseError(
 			`CurseForge file download host ${downloadUrl.hostname} is not allowed for projectId ${fileReference.projectId}, fileId ${fileReference.fileId}. Expected ${allowedCurseForgeDownloadHost}.`,
+			{
+				reason: "download_url_not_allowed",
+				details: {
+					actualHost: downloadUrl.hostname,
+					expectedHost: allowedCurseForgeDownloadHost,
+					fileId: fileReference.fileId,
+					projectId: fileReference.projectId,
+				},
+			},
 		);
 	}
 
@@ -146,16 +217,4 @@ function parseDownloadUrl(
 function readCurseForgeApiKey() {
   const curseForgeApiKey = process.env.CURSEFORGE_API_KEY?.trim();
   return curseForgeApiKey && curseForgeApiKey.length > 0 ? curseForgeApiKey : null;
-}
-
-function jsonErrorResponse(error: string, status: number) {
-  return Response.json({ error }, { status });
-}
-
-function formatErrorReason(caughtError: unknown) {
-  if (caughtError instanceof Error) {
-    return caughtError.message;
-  }
-
-  return String(caughtError);
 }

@@ -151,8 +151,37 @@ describe("formatConversionErrorForLocale", () => {
     );
 
     expect(formattedError).toBe(
-      "URL 无效。原因：MRPack download URL https://bad url 的 URL 无效：https://bad url。",
+      "URL 无效。原因：MRPack 下载链接的 URL 无效：https://bad url。",
     );
+    expect(formattedError).not.toContain("MRPack download URL");
+  });
+
+  test("formats Chinese invalid CurseForge route responses without English fallback text", () => {
+    const formattedError = formatConversionErrorForLocale(
+      new ConversionError(
+        conversionErrorCodes.downloadFailed,
+        "Invalid CurseForge files route response at files: \"bad-files\". Expected an array.",
+        undefined,
+        {
+          reason: "curseforge_route_error",
+          route: "/api/curseforge/files",
+          routeReason: "invalid_route_response",
+          status: 200,
+        },
+        {
+          expectedDescription: "an array",
+          fieldPath: "files",
+          problemValue: "bad-files",
+        },
+      ),
+      chineseLocaleCode,
+    );
+
+    expect(formattedError).toBe(
+      "下载失败。原因：CurseForge 下载服务返回的数据无效，请稍后再试。",
+    );
+    expect(formattedError).not.toContain("Invalid CurseForge");
+    expect(formattedError).not.toContain("Expected an array");
   });
 
   test("formats Chinese no mrpack project details", () => {
@@ -169,6 +198,45 @@ describe("formatConversionErrorForLocale", () => {
     expect(formattedError).toBe(
       "输入无效。原因：Modrinth 项目 demo 没有可转换的 .mrpack 文件。",
     );
+  });
+
+  test("formats Chinese invalid MRPack errors without leaking English fallback messages", () => {
+    const formattedError = formatConversionErrorForLocale(
+      new ConversionError(
+        conversionErrorCodes.invalidMrpack,
+        "Invalid .mrpack archive. Missing required modrinth.index.json.",
+      ),
+      chineseLocaleCode,
+    );
+
+    expect(formattedError).toBe(
+      "MRPack 压缩包无效。原因：MRPack 文件结构无效，请确认上传的是完整的 .mrpack 文件。",
+    );
+    expect(formattedError).not.toContain("Invalid .mrpack archive");
+    expect(formattedError).not.toContain("modrinth.index.json");
+  });
+
+  test("formats Chinese CurseForge route failures from structured context", () => {
+    const formattedError = formatConversionErrorForLocale(
+      new ConversionError(
+        conversionErrorCodes.downloadFailed,
+        "Failed to download CurseForge file through /api/curseforge/download: 500 Missing server env CURSEFORGE_API_KEY.",
+        undefined,
+        {
+          reason: "curseforge_route_error",
+          route: "/api/curseforge/download",
+          routeReason: "missing_api_key",
+          status: 500,
+        },
+      ),
+      chineseLocaleCode,
+    );
+
+    expect(formattedError).toBe(
+      "下载失败。原因：CurseForge 下载服务暂时不可用，请稍后再试。",
+    );
+    expect(formattedError).not.toContain("CURSEFORGE_API_KEY");
+    expect(formattedError).not.toContain("Failed to download");
   });
 
   test("formats unknown English errors with a localized fallback", () => {

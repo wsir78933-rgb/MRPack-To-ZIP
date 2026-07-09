@@ -57,6 +57,10 @@ describe("createModrinthIndex", () => {
             sha512:
               "8f14e45fceea167a5a36dedd4bea2543a2d2f340dff61b5528484f1e2c80a7f6b8721f9490b7ed7dbeac7fbc36c31b2c3eab42a19f9b7205dece7b59e6c8f6a1",
           },
+          env: {
+            client: "required",
+            server: "required",
+          },
           fileSize: 12345,
         },
       ],

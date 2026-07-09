@@ -1,31 +1,39 @@
 import type { Metadata, MetadataRoute } from "next";
 
+import {
+  getSiteMetadataCopy,
+  siteMetadataSocialPreviewImageAlt,
+} from "@/lib/i18n/site-metadata-copy";
+
 export const defaultProductionSiteUrl = "https://mrpacktozip.pro";
+export const siteContentLastModified = new Date("2026-07-08T00:00:00.000Z");
 
 export const siteRoutePaths = [
   "/",
   "/zh",
   "/zip-to-mrpack",
   "/zh/zip-to-mrpack",
+  "/about",
+  "/zh/about",
+  "/privacy",
+  "/zh/privacy",
+  "/terms",
+  "/zh/terms",
+  "/contact",
+  "/zh/contact",
 ] as const;
 
 export type SiteRoutePath = (typeof siteRoutePaths)[number];
 
 const socialPreviewImagePath = "/assets/mrpackzip-voxel-bg.png";
-const socialPreviewImageAlt = "MRPack to ZIP converter interface";
 
-type PageSeoDefinition = {
-  title: string;
-  description: string;
+type PageSeoRouteDefinition = {
   canonicalPath: SiteRoutePath;
   languageAlternates: Record<"en" | "zh-Hans" | "x-default", SiteRoutePath>;
 };
 
-export const pageSeoDefinitions: Record<SiteRoutePath, PageSeoDefinition> = {
+export const pageSeoDefinitions: Record<SiteRoutePath, PageSeoRouteDefinition> = {
   "/": {
-    title: "MRPack to ZIP Converter - Free Online Modrinth Modpack Tool",
-    description:
-      "Use this MRPack converter to turn Modrinth .mrpack files, project slugs, or download links into launcher-ready ZIP files in your browser.",
     canonicalPath: "/",
     languageAlternates: {
       en: "/",
@@ -34,9 +42,6 @@ export const pageSeoDefinitions: Record<SiteRoutePath, PageSeoDefinition> = {
     },
   },
   "/zh": {
-    title: "MRPack 转 ZIP 在线转换器 - Minecraft 模组包工具",
-    description:
-      "在浏览器中使用 MRPack 转 ZIP 工具，将 Modrinth .mrpack 文件、项目 ID 或下载链接转换成启动器可导入的 ZIP。",
     canonicalPath: "/zh",
     languageAlternates: {
       en: "/",
@@ -45,9 +50,6 @@ export const pageSeoDefinitions: Record<SiteRoutePath, PageSeoDefinition> = {
     },
   },
   "/zip-to-mrpack": {
-    title: "ZIP to MRPack Converter",
-    description:
-      "Convert CurseForge modpack ZIP exports into Modrinth-compatible MRPack files.",
     canonicalPath: "/zip-to-mrpack",
     languageAlternates: {
       en: "/zip-to-mrpack",
@@ -56,14 +58,75 @@ export const pageSeoDefinitions: Record<SiteRoutePath, PageSeoDefinition> = {
     },
   },
   "/zh/zip-to-mrpack": {
-    title: "ZIP 转 MRPack 转换器",
-    description:
-      "在浏览器中把 CurseForge 整合包 ZIP 转换成兼容 Modrinth 的 MRPack 文件。",
     canonicalPath: "/zh/zip-to-mrpack",
     languageAlternates: {
       en: "/zip-to-mrpack",
       "zh-Hans": "/zh/zip-to-mrpack",
       "x-default": "/zip-to-mrpack",
+    },
+  },
+  "/about": {
+    canonicalPath: "/about",
+    languageAlternates: {
+      en: "/about",
+      "zh-Hans": "/zh/about",
+      "x-default": "/about",
+    },
+  },
+  "/zh/about": {
+    canonicalPath: "/zh/about",
+    languageAlternates: {
+      en: "/about",
+      "zh-Hans": "/zh/about",
+      "x-default": "/about",
+    },
+  },
+  "/privacy": {
+    canonicalPath: "/privacy",
+    languageAlternates: {
+      en: "/privacy",
+      "zh-Hans": "/zh/privacy",
+      "x-default": "/privacy",
+    },
+  },
+  "/zh/privacy": {
+    canonicalPath: "/zh/privacy",
+    languageAlternates: {
+      en: "/privacy",
+      "zh-Hans": "/zh/privacy",
+      "x-default": "/privacy",
+    },
+  },
+  "/terms": {
+    canonicalPath: "/terms",
+    languageAlternates: {
+      en: "/terms",
+      "zh-Hans": "/zh/terms",
+      "x-default": "/terms",
+    },
+  },
+  "/zh/terms": {
+    canonicalPath: "/zh/terms",
+    languageAlternates: {
+      en: "/terms",
+      "zh-Hans": "/zh/terms",
+      "x-default": "/terms",
+    },
+  },
+  "/contact": {
+    canonicalPath: "/contact",
+    languageAlternates: {
+      en: "/contact",
+      "zh-Hans": "/zh/contact",
+      "x-default": "/contact",
+    },
+  },
+  "/zh/contact": {
+    canonicalPath: "/zh/contact",
+    languageAlternates: {
+      en: "/contact",
+      "zh-Hans": "/zh/contact",
+      "x-default": "/contact",
     },
   },
 };
@@ -128,6 +191,7 @@ export function buildPageMetadata(
   siteUrl = resolveProductionSiteUrl(),
 ): Metadata {
   const pageSeoDefinition = pageSeoDefinitions[routePath];
+  const pageSeoCopy = getSiteMetadataCopy(routePath);
   const canonicalUrl = buildAbsoluteUrl(pageSeoDefinition.canonicalPath, siteUrl);
   const socialPreviewImageUrl = new URL(
     socialPreviewImagePath,
@@ -144,15 +208,15 @@ export function buildPageMetadata(
 
   return {
     metadataBase: siteUrl,
-    title: pageSeoDefinition.title,
-    description: pageSeoDefinition.description,
+    title: pageSeoCopy.title,
+    description: pageSeoCopy.description,
     alternates: {
       canonical: canonicalUrl,
       languages: absoluteLanguageAlternates,
     },
     openGraph: {
-      title: pageSeoDefinition.title,
-      description: pageSeoDefinition.description,
+      title: pageSeoCopy.title,
+      description: pageSeoCopy.description,
       url: canonicalUrl,
       siteName: "MRPack to ZIP",
       type: "website",
@@ -161,18 +225,18 @@ export function buildPageMetadata(
           url: socialPreviewImageUrl,
           width: 1672,
           height: 941,
-          alt: socialPreviewImageAlt,
+          alt: siteMetadataSocialPreviewImageAlt,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: pageSeoDefinition.title,
-      description: pageSeoDefinition.description,
+      title: pageSeoCopy.title,
+      description: pageSeoCopy.description,
       images: [
         {
           url: socialPreviewImageUrl,
-          alt: socialPreviewImageAlt,
+          alt: siteMetadataSocialPreviewImageAlt,
         },
       ],
     },
@@ -184,6 +248,7 @@ export function buildSitemapEntries(
 ): MetadataRoute.Sitemap {
   return siteRoutePaths.map((routePath) => ({
     url: buildAbsoluteUrl(routePath, siteUrl),
+    lastModified: siteContentLastModified,
   }));
 }
 

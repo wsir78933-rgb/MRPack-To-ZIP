@@ -254,13 +254,6 @@ function resolveManifestFileMetadata(
     );
   }
 
-  if (!curseForgeFile.isAvailable) {
-    throw new ConversionError(
-      conversionErrorCodes.invalidInput,
-      `CurseForge file is not available for projectId ${manifestFile.projectId}, fileId ${manifestFile.fileId}.`,
-    );
-  }
-
   return curseForgeFile;
 }
 
