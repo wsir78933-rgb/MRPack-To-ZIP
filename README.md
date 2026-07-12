@@ -1,39 +1,23 @@
-# MRPack to ZIP Converter
+# MRPack To ZIP
 
-MRPack to ZIP Converter is a Next.js project for building a browser-first `.mrpack` to `.zip` conversion tool.
+一个基于 Next.js 的 Minecraft 模组包在线转换工具，支持 **MRPack 转 ZIP**，并提供 **CurseForge ZIP 转 MRPack** 的反向转换功能。
 
-## Current Status
+在线使用：[https://mrpacktozip.pro](https://mrpacktozip.pro)
 
-This is a pure frontend skeleton. The upload UI can be shaped around the product flow, but the actual `.mrpack` parsing, file download, and ZIP generation algorithm has not been implemented yet.
+## 当前状态
 
-## Tech Stack
+项目的核心转换功能已经实现，不是单纯的前端页面原型。
 
-- [Next.js](https://nextjs.org/)
-- [React](https://react.dev/)
-- [Tailwind CSS](https://tailwindcss.com/)
+当前支持两种转换方向：
 
-## Getting Started
+### MRPack 转 ZIP
 
-Install dependencies:
+支持以下三种输入方式：
 
-```bash
-pnpm install
-```
+- 输入 Modrinth 项目 ID 或 Slug
+- 输入 `.mrpack` 文件下载链接
+- 直接上传本地 `.mrpack` 文件
 
-Run the local development server:
+转换过程会读取 `modrinth.index.json`，收集模组包中的 override 文件，下载索引引用的远程文件，并在浏览器中生成可下载的 ZIP 文件。
 
-```bash
-pnpm dev
-```
-
-Build the project:
-
-```bash
-pnpm build
-```
-
-## Notes
-
-- No environment variables are required for the current skeleton.
-- No conversion library is included in this phase.
-- Conversion logic should be added only when that phase begins.
+###
